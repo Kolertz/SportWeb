@@ -1,0 +1,23 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+    <meta name="viewport" content="width=device-width" />
+    <title>SPORTWeb | @ViewBag.Title</title>
+</head>
+<body>
+    <header>
+        <h1>SPORTWeb</h1>
+        @await Component.InvokeAsync("ProfileHeaderComponent")
+        @if (ViewBag.Message != null)
+        {
+            <p>@ViewBag.Message</p>
+        }
+    </header>
+    <div>
+        @RenderBody()
+    </div>
+    <footer>
+        <p>© Kolerts 2024</p>
+    </footer>
+</body>
+</html>

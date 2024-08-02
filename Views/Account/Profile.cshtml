@@ -1,0 +1,24 @@
+﻿@model ProfileViewModel
+@{
+    Layout = "";
+    
+}
+<!DOCTYPE html>
+<html>
+<body>
+    <header>
+        @if (ViewBag.Message != null)
+        {
+            <p>@ViewBag.Message</p>
+        }
+    </header>
+    <img src="@Model.Avatar" alt="Avatar" style="width: 256px; height: 256px; border-radius: 50%;" />
+    <h1>@Model.Name</h1>
+    <p>@Model.Description</p>
+    @if (Model.IsUserProfile)
+    {
+        <a asp-action="Edit" asp-controller="Account" asp-route-id="@Model.Id">Edit Profile</a>
+    }
+    <a asp-action="Index" asp-controller="Home">Back to Home</a>
+</body>
+</html>

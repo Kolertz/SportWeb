@@ -1,0 +1,52 @@
+﻿@model SportWeb.Models.EditProfileViewModel
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Редактирование профиля</title>
+</head>
+<body>
+    <h1>Редактирование профиля</h1>
+    <form asp-action="Edit" method="post" enctype="multipart/form-data">
+        <div>
+            <label asp-for="Name"></label>
+            <input asp-for="Name" type="text" value="@Model.Name">
+            <span asp-validation-for="Name" class="text-danger"></span>
+        </div>
+        <div>
+            <label asp-for="FileUpload">Аватар:</label>
+            <input asp-for="FileUpload" type="file" accept="image/*">
+            <span asp-validation-for="FileUpload" class="text-danger"></span>
+        </div>
+        <div>
+            <label asp-for="Description">Описание:</label>
+            <textarea asp-for="Description" rows="4" placeholder="Напишите что-нибудь о себе...">@Model.Description</textarea>
+            <span asp-validation-for="Description" class="text-danger"></span>
+        </div>
+        <div>
+            <label asp-for="Password">Новый пароль:</label>
+            <input asp-for="Password" type="password" placeholder="Введите новый пароль">
+            <span asp-validation-for="Password" class="text-danger"></span>
+        </div>
+        <div>
+            <label asp-for="ConfirmPassword">Подтверждение пароля:</label>
+            <input asp-for="ConfirmPassword" type="password" placeholder="Подтвердите новый пароль">
+            <span asp-validation-for="ConfirmPassword" class="text-danger"></span>
+        </div>
+        <div>
+            <button type="submit">Сохранить изменения</button>
+        </div>
+    </form>
+    <form asp-action="Delete" asp-controller="Account" method="post">
+        <button type="submit" class="btn btn-danger">Delete</button>
+        <input type="hidden" name="__RequestVerificationToken" value="@Html.AntiForgeryToken()"/>
+    </form>
+    <div>
+        <a asp-action="Index" asp-controller="Home" method>Back to Home</a>
+    </div>
+    <script src="https://ajax.aspnetcdn.com/ajax/jQuery/jquery-3.5.1.min.js"></script>
+    <script src="https://ajax.aspnetcdn.com/ajax/jquery.validate/1.17.0/jquery.validate.min.js"></script>
+    <script src="https://ajax.aspnetcdn.com/ajax/jquery.validation.unobtrusive/3.2.10/jquery.validate.unobtrusive.min.js"></script>
+</body>
+</html>

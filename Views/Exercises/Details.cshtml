@@ -1,0 +1,35 @@
+﻿@model SportWeb.Models.Entities.Exercise
+@{
+    ViewBag.Title = "Exercise Details";
+}
+
+<h2>@ViewBag.Title</h2>
+
+<div>
+    <h3>@Model.Name</h3>
+    <div>
+        <img src="@Model.PictureUrl" alt="@Model.Name" style="width:200px; height:auto;" />
+    </div>
+    <p><strong>Description:</strong> @Model.Description</p>
+    <p><strong>State:</strong> @Model.State</p>
+    <p><strong>Categories:</strong>
+        @if (Model.Categories != null && Model.Categories.Any())
+        {
+            <ul>
+                @foreach (var category in Model.Categories)
+                {
+                    <li>@category.Name</li>
+                }
+            </ul>
+        }
+        else
+        {
+            <span>No categories</span>
+        }
+    </p>
+    <p><strong>Author:</strong> @Model.User?.Name ?? "Unknown"</p>
+</div>
+
+<div>
+    <a asp-action="Index" asp-controller="Exercises">Back to Exercises</a>
+</div>

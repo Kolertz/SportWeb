@@ -1,0 +1,22 @@
+﻿@model User
+<!DOCTYPE html>
+    <html>
+    <head>
+        <meta charset='utf-8' />
+        <title>Login</title>
+    </head>
+    <body>
+        <h2>Login</h2>
+        <form asp-controller="Account" asp-action="Login" asp-antiforgery="true">
+            <p>
+                <label asp-for="Email"></label>
+                <input type="email" asp-for="Email" />
+            </p>
+            <p>
+                <label asp-for="Password"></label>
+                <input type='password' asp-for="Password" />
+            </p>
+            <input type='submit' value='Login' />
+        </form>
+    </body>
+    </html>
