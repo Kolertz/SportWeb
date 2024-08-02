@@ -1,4 +1,4 @@
-﻿@model SportWeb.Models.Entities.Exercise
+﻿@model SportWeb.Models.ExerciseDetailsViewModel
 @{
     ViewBag.Title = "Exercise Details";
 }
@@ -27,9 +27,14 @@
             <span>No categories</span>
         }
     </p>
-    <p><strong>Author:</strong> @Model.User?.Name ?? "Unknown"</p>
+    <p><strong>Author:</strong> @Model.AuthorName</p>
 </div>
-
+@if (ViewBag.IsAdmin || User.Identity != null && Model.AuthorId.ToString() == User.Identity.Name)
+{
+    <div>
+        <a asp-action="Edit" asp-controller="Exercises" asp-route-id="@Model.Id">Edit</a>
+    </div>
+}
 <div>
     <a asp-action="Index" asp-controller="Exercises">Back to Exercises</a>
 </div>

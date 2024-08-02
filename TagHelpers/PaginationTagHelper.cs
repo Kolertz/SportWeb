@@ -18,8 +18,8 @@ namespace SportWeb.TagHelpers
         [HtmlAttributeNotBound]
         public ViewContext ViewContext { get; set; } = null!;
         [HtmlAttributeName("pagination-model")]
-        public PaginationModel PaginationModel { get; set; }
-        public string PageAction { get; set; }
+        public PaginationModel? PaginationModel { get; set; }
+        public string? PageAction { get; set; }
 
         public override void Process(TagHelperContext context, TagHelperOutput output)
         {

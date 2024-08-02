@@ -1,5 +1,4 @@
 ﻿<a asp-controller="Exercises" asp-action="Index">All Exerecises</a>
-<a asp-controller="Exercises" asp-action="Add">Add Exercise</a>
 @if (User.Identity != null && User.Identity.Name != null)
 {
     if (ViewBag.IsAdmin)
@@ -8,6 +7,7 @@
             <a class="nav-link" asp-controller="Admin" asp-action="Index">Admin Panel</a>
         </div>
     }
+    <div><a asp-controller="Exercises" asp-action="Add">Add Exercise</a></div>
     <a asp-controller="Account" asp-action="Logout">Log out</a>
         
 } else

@@ -11,27 +11,51 @@ namespace SportWeb.Controllers
     {
         IPictureService pictureService;
         IPaginationService paginationService;
-        public ExercisesController(ApplicationContext context, ILogger<ControllerBase> logger, IUserService userService, IFileService fileService, IPictureService pictureService, IPaginationService paginationService)
+        IAuthorizationService authorizationService;
+        public ExercisesController(ApplicationContext context, ILogger<ControllerBase> logger, IUserService userService, IFileService fileService, IPictureService pictureService, IPaginationService paginationService, IAuthorizationService authorizationService)
             : base(context, logger, userService, fileService)
         {
             this.pictureService = pictureService;
             this.paginationService = paginationService;
+            this.authorizationService = authorizationService;
         }
         public async Task<IActionResult> Index(int page = 1, int pageSize = 5)
         {
-            IQueryable<Exercise> exercises = db.Exercises.Where(x => x.State == ExerciseState.Approved).OrderBy(x => x.Id);
+            IQueryable<Exercise> exercises = db.Exercises.Where(x => x.State == ExerciseState.Approved).Include(u => u.User).OrderBy(x => x.Id);
             (var items, var model) = await paginationService.GetPaginatedResultAsync(exercises, page, pageSize);
-            ViewBag.Exercises = items;
+            var result = items.Select(x => new
+            {
+                x.Id,
+                x.Name,
+                x.Description,
+                x.AuthorId,
+                Username = x.User != null ? x.User.Name : "Unknown"
+            }).ToList();
+            ViewBag.Exercises = result;
             return View(model);
         }
         public async Task<IActionResult> Details(int id)
         {
-            var exercise = await db.Exercises.FirstOrDefaultAsync(x => x.Id == id);
+            var exercise = await db.Exercises.Include(x => x.User).FirstOrDefaultAsync(x => x.Id == id);
             if (exercise == null)
             {
                 return NotFound();
             }
-            return View(exercise);
+            var model = new ExerciseDetailsViewModel
+            {
+                Id = exercise.Id,
+                Description = exercise.Description,
+                Name = exercise.Name,
+                AuthorId = exercise.AuthorId,
+                AuthorName = exercise.User != null ? exercise.User.Name : "Unknown",
+                PictureUrl = pictureService.GetPictureUrl(exercise.PictureUrl),
+                Categories = exercise.Categories,
+                State = exercise.State
+            };
+            bool isAdmin = authorizationService.AuthorizeAsync(User, "AdminOnly").Result.Succeeded;
+            ViewBag.IsAdmin = isAdmin;
+
+            return View(model);
         }
         [HttpGet]
         [Authorize]
@@ -52,7 +76,7 @@ namespace SportWeb.Controllers
                 Description = model.Description,
                 Name = model.Name,
                 State = ExerciseState.Pending,
-                AuthorId = User.Identity!.Name!,
+                AuthorId = int.Parse(User.Identity!.Name!)
             };
 
             var fileUpload = model.FileUpload;
@@ -70,6 +94,17 @@ namespace SportWeb.Controllers
         [Authorize]
         public async Task<IActionResult> Edit(int id)
         {
+            var exercise = await db.Exercises.FirstOrDefaultAsync(x => x.Id == id);
+            bool isAdmin = authorizationService.AuthorizeAsync(User, "AdminOnly").Result.Succeeded;
+
+            if (exercise == null)
+            {
+                return NotFound();
+            }
+            if (!isAdmin && (User.Identity == null || User.Identity.Name != exercise.AuthorId.ToString())) 
+            {
+                return Forbid();
+            }
             return View();
         }
         [HttpPost]
