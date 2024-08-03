@@ -2,6 +2,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using SportWeb.Models;
 
@@ -10,9 +11,11 @@ using SportWeb.Models;
 namespace SportWeb.Migrations
 {
     [DbContext(typeof(ApplicationContext))]
-    partial class ApplicationContextModelSnapshot : ModelSnapshot
+    [Migration("20240803111753_FavouriteExercises")]
+    partial class FavouriteExercises
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -51,21 +54,6 @@ namespace SportWeb.Migrations
                     b.ToTable("ExerciseUser");
                 });
 
-            modelBuilder.Entity("ExerciseWorkout", b =>
-                {
-                    b.Property<int>("ExercisesId")
-                        .HasColumnType("int");
-
-                    b.Property<int>("WorkoutsId")
-                        .HasColumnType("int");
-
-                    b.HasKey("ExercisesId", "WorkoutsId");
-
-                    b.HasIndex("WorkoutsId");
-
-                    b.ToTable("ExerciseWorkout");
-                });
-
             modelBuilder.Entity("SportWeb.Models.Entities.Category", b =>
                 {
                     b.Property<int>("Id")
@@ -75,6 +63,10 @@ namespace SportWeb.Migrations
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
                     b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("PictureUrl")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
@@ -153,28 +145,6 @@ namespace SportWeb.Migrations
                     b.ToTable("Users");
                 });
 
-            modelBuilder.Entity("SportWeb.Models.Entities.Workout", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<int>("AuthorId")
-                        .HasColumnType("int");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("AuthorId");
-
-                    b.ToTable("Workouts");
-                });
-
             modelBuilder.Entity("CategoryExercise", b =>
                 {
                     b.HasOne("SportWeb.Models.Entities.Category", null)
@@ -205,21 +175,6 @@ namespace SportWeb.Migrations
                         .IsRequired();
                 });
 
-            modelBuilder.Entity("ExerciseWorkout", b =>
-                {
-                    b.HasOne("SportWeb.Models.Entities.Exercise", null)
-                        .WithMany()
-                        .HasForeignKey("ExercisesId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("SportWeb.Models.Entities.Workout", null)
-                        .WithMany()
-                        .HasForeignKey("WorkoutsId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-                });
-
             modelBuilder.Entity("SportWeb.Models.Entities.Exercise", b =>
                 {
                     b.HasOne("SportWeb.Models.Entities.User", "User")
@@ -231,22 +186,9 @@ namespace SportWeb.Migrations
                     b.Navigation("User");
                 });
 
-            modelBuilder.Entity("SportWeb.Models.Entities.Workout", b =>
-                {
-                    b.HasOne("SportWeb.Models.Entities.User", "User")
-                        .WithMany("Workouts")
-                        .HasForeignKey("AuthorId")
-                        .OnDelete(DeleteBehavior.NoAction)
-                        .IsRequired();
-
-                    b.Navigation("User");
-                });
-
             modelBuilder.Entity("SportWeb.Models.Entities.User", b =>
                 {
                     b.Navigation("Exercises");
-
-                    b.Navigation("Workouts");
                 });
 #pragma warning restore 612, 618
         }

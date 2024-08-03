@@ -7,6 +7,7 @@ namespace SportWeb.Models
         public DbSet<User> Users { get; set; } = null!;
         public DbSet<Exercise> Exercises { get; set; } = null!;
         public DbSet<Category> Categories { get; set; } = null!;
+        public DbSet<Workout> Workouts { get; set; } = null!;
         public ApplicationContext(DbContextOptions<ApplicationContext> options)
             : base(options)
         {
@@ -15,8 +16,11 @@ namespace SportWeb.Models
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             modelBuilder.Entity<Exercise>().HasMany(x => x.Categories).WithMany(x => x.Exercises);
+            modelBuilder.Entity<User>().HasMany(x => x.FavoriteExercises).WithMany(x => x.UsersWhoFavorited);
             modelBuilder.Entity<User>().HasAlternateKey(x => x.Email);
-            modelBuilder.Entity<Exercise>().HasOne(x => x.User).WithMany(x => x.Exercises).HasForeignKey(x => x.AuthorId);
+            modelBuilder.Entity<Exercise>().HasOne(x => x.User).WithMany(x => x.Exercises).HasForeignKey(x => x.AuthorId).OnDelete(DeleteBehavior.NoAction);
+            modelBuilder.Entity<Workout>().HasOne(x => x.User).WithMany(x => x.Workouts).HasForeignKey(x => x.AuthorId).OnDelete(DeleteBehavior.NoAction);
+            modelBuilder.Entity<Workout>().HasMany(x => x.Exercises).WithMany(x => x.Workouts);
             base.OnModelCreating(modelBuilder);
         }
     }

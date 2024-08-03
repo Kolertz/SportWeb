@@ -1,0 +1,45 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+    <meta name="viewport" content="width=device-width" />
+    <title>SPORTWeb | @ViewBag.Title</title>
+    <style>
+        .rectangle-border {
+            border: 2px solid black; /* Ширина и цвет рамки */
+            padding: 20px; /* Внутренний отступ */
+            margin: 20px; /* Внешний отступ */
+        }
+    </style>
+    <style>
+        .select2-container {
+            width: 300px !important;
+        }
+    </style>
+    <!-- Подключение jQuery -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+    <!-- Подключение Select2 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+
+    <!-- Подключение Select2 JS -->
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+</head>
+<body>
+    <header>
+        <h1>SPORTWeb</h1>
+        @await Component.InvokeAsync("ProfileHeaderComponent")
+        @if (ViewBag.Message != null)
+        {
+            <p>@ViewBag.Message</p>
+        }
+    </header>
+    <div>
+        @RenderBody()
+    </div>
+    <footer>
+        <a asp-action="Index">Back to All Exercises</a>
+        <p>© Kolerts 2024</p>
+    </footer>
+</body>
+</html>
+

@@ -12,6 +12,8 @@ namespace SportWeb.Models.Entities
         public string Description { get; set; } = "No Description";
         public string Avatar { get; set; } = "avatar.png";
         public ICollection<Exercise>? Exercises { get; set; }
+        public ICollection<Exercise>? FavoriteExercises { get; set; }
+        public ICollection<Workout>? Workouts { get; set; }
         /*
         public User() { }
         public User(string? name, string email, string password)

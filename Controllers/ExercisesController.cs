@@ -61,23 +61,35 @@ namespace SportWeb.Controllers
         [Authorize]
         public IActionResult Add()
         {
-            return View();
+            var categories = db.Categories.ToList();
+            var emptyExercise = new Exercise { Description = "", Name = "" };
+            var model = new EditExerciseViewModel {  Categories = categories, Exercise = emptyExercise };
+            return View(model);
         }
         [HttpPost]
         [Authorize]
-        public async Task<IActionResult> Add(AddExerciseViewModel model)
+        public async Task<IActionResult> Add(EditExerciseViewModel model)
         {
-            if (!ModelState.IsValid)
+            var exercise = model.Exercise;
+            if (!ModelState.IsValid || exercise == null)
             {
                 return View(model);
             }
-            var exercise = new Exercise
+
+            var isAdmin = (await authorizationService.AuthorizeAsync(User, "AdminOnly")).Succeeded;
+            
+            if (!isAdmin)
             {
-                Description = model.Description,
-                Name = model.Name,
-                State = ExerciseState.Pending,
-                AuthorId = int.Parse(User.Identity!.Name!)
-            };
+                exercise.State = ExerciseState.Pending;
+                logger.LogInformation("Exercise state changed to pending");
+            }
+            else
+            {
+                exercise.State = ExerciseState.Approved;
+                logger.LogInformation("Exercise state changed to approved");
+            }
+            exercise.AuthorId = int.Parse(User.Identity!.Name!);
+            exercise.Categories = (List<Category>?)model.SelectedCategories;
 
             var fileUpload = model.FileUpload;
             if (fileUpload != null && fileUpload.Length > 0)
@@ -95,7 +107,7 @@ namespace SportWeb.Controllers
         public async Task<IActionResult> Edit(int id)
         {
             var exercise = await db.Exercises.FirstOrDefaultAsync(x => x.Id == id);
-            bool isAdmin = authorizationService.AuthorizeAsync(User, "AdminOnly").Result.Succeeded;
+            var isAdmin = (await authorizationService.AuthorizeAsync(User, "AdminOnly")).Succeeded;
 
             if (exercise == null)
             {
@@ -105,11 +117,52 @@ namespace SportWeb.Controllers
             {
                 return Forbid();
             }
-            return View();
+            var categories = db.Categories.ToList();
+            var model = new EditExerciseViewModel { Exercise = exercise, Categories = categories };
+            return View(model);
         }
         [HttpPost]
         [Authorize]
-        public async Task<IActionResult> Edit(AddExerciseViewModel model)
+        public async Task<IActionResult> Edit(EditExerciseViewModel model, string? returnUrl)
+        {
+            var exercise = model.Exercise;
+            if (!ModelState.IsValid || exercise == null)
+            {
+                logger.LogWarning("Something went wrong!");
+                return View(model);
+            }
+            var isAdmin = (await authorizationService.AuthorizeAsync(User, "AdminOnly")).Succeeded;
+            if (!isAdmin)
+            {
+                exercise.State = ExerciseState.Pending;
+                logger.LogInformation("Exercise state changed to pending");
+            } else
+            {
+                exercise.State = ExerciseState.Approved;
+                logger.LogInformation("Exercise state changed to approved");
+            }
+
+            var fileUpload = model.FileUpload;
+            if (fileUpload != null && fileUpload.Length > 0)
+            {
+                exercise.PictureUrl = pictureService.NewPictureName(exercise);
+                var filePath = pictureService.GetPicturePath(exercise.PictureUrl);
+                await fileService.UploadFile(fileUpload, filePath);
+            }
+
+            db.Exercises.Update(exercise);
+            await db.SaveChangesAsync();
+            TempData["Message"] = "Exercise edited successfully!";
+            /*
+            if (returnUrl != null && Url.IsLocalUrl(returnUrl))
+            {
+                return Redirect(returnUrl);
+            }
+            */
+            return RedirectToAction(nameof(Index));
+        }
+        [Route("Profile/{id}/Exercises")]
+        public IActionResult UserExercises(int id)
         {
             return View();
         }

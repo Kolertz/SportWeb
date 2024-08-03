@@ -1,7 +1,6 @@
 ﻿@model ProfileViewModel
 @{
     Layout = "";
-    
 }
 <!DOCTYPE html>
 <html>
@@ -19,6 +18,29 @@
     {
         <a asp-action="Edit" asp-controller="Account" asp-route-id="@Model.Id">Edit Profile</a>
     }
-    <a asp-action="Index" asp-controller="Home">Back to Home</a>
+    <div><strong>Exercises added by user(@Model.AddedExercisesCount):</strong></div>
+    <ul>
+        @if (Model.AddedExercises == null)
+        {
+            <p>No exercises added</p>
+        } else
+        {
+            var count = 0;
+            @foreach (var exercise in Model.AddedExercises)
+            {
+                count++;
+                if (count == 4)
+                {
+                    <p>...</p>
+                    <a asp-controller="Exercises" asp-action="UserExercises" asp-route-id="@Model.Id"></a>
+                    break;
+                }
+                <a asp-action="Details" asp-controller="Exercises" asp-route-id="@exercise.Id">@exercise.Name</a>
+            }
+        }
+    </ul>
+    <footer>
+        <a asp-action="Index" asp-controller="Home">Back to Home</a>
+    </footer>
 </body>
 </html>

@@ -97,13 +97,17 @@ namespace SportWeb.Controllers
                 return NotFound();
             }
             var isUserProfile = User.Identity!.Name == id;//User != null && User.HasClaim(c => c.Type == "Id") && User.FindFirst(c => c.Type == "Id").Value == Model.Id.ToString();
+            var addedExercises = db.Exercises.Where(x => x.AuthorId == user.Id).ToList();
+            var addedExercisesCount = addedExercises.Count;
             var model = new ProfileViewModel
             {
                 IsUserProfile = isUserProfile,
                 Name = user.Name,
                 Avatar = avatarService.GetAvatarUrl(user.Avatar),
                 Description = user.Description,
-                Id = user.Id.ToString()
+                Id = user.Id.ToString(),
+                AddedExercises = addedExercises,
+                AddedExercisesCount = addedExercisesCount
             };
             return View(model);
         }
@@ -142,9 +146,9 @@ namespace SportWeb.Controllers
                 var fileUpload = model.FileUpload;
                 if (fileUpload != null && fileUpload.Length > 0)
                 {
-                    var filePath = avatarService.GetAvatarPath(avatarService.NewAvatarName(user));
+                    user.Avatar = avatarService.NewAvatarName(user);
+                    var filePath = avatarService.GetAvatarPath(user.Avatar);
                     await fileService.UploadFile(fileUpload, filePath);
-                    user.Avatar = filePath;
                 }
                 user!.Name = model.Name;
                 if (model.Password != null)

@@ -10,7 +10,7 @@
     <div class ="rectangle-border">
         <h3><a asp-action="Details" asp-controller="Exercises" asp-route-id="@item.Id">@item.Name</a></h3>
         <p>@item.Description</p>
-        <form asp-action="Approve" asp-controller="Exercises" method="post">
+        <form asp-action="Approve" asp-controller="Admin" method="post">
             <input type="hidden" name="id" value="@item.Id" />
             <button type="submit">Approve</button>
         </form>

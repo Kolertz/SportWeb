@@ -1,5 +1,7 @@
-﻿@*
-    For more information on enabling MVC for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
-*@
+﻿@model EditExerciseViewModel
+
+<h1>Edit Exercise</h1>
 @{
+    ViewBag.Action = "Edit";
+    await Html.RenderPartialAsync("_ExerciseForm", Model);
 }
