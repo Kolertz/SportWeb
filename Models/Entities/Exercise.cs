@@ -16,6 +16,6 @@ namespace SportWeb.Models.Entities
         public int AuthorId { get; set; }
         public User? User { get; set; }
         public ICollection<User>? UsersWhoFavorited { get; set; }
-        public ICollection<Workout>? Workouts { get; set; }
+        public ICollection<WorkoutExercise>? WorkoutExercises { get; set; }
     }
 }

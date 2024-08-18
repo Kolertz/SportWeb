@@ -8,7 +8,7 @@ namespace SportWeb.Services
 {
     public interface IUserService
     {
-        Task<User?> GetUserAsync<T>(T id);
+        Task<User?> GetUserAsync<T>(T id, bool noTracking = false);
         Task<User?> AddUserAcync(string? name, string email, string password);
         Task<bool> RemoveUserAsync<T>(T id);
         bool IsCurrentUser(int id);
@@ -17,20 +17,9 @@ namespace SportWeb.Services
         bool IsAdmin<T>(T id);
         
     }
-    public class UserService : IUserService
+    public class UserService(ApplicationContext db, ILogger<UserService> logger, IPasswordCryptor passwordCryptor, IHttpContextAccessor httpContextAccessor) : IUserService
     {
-        readonly ILogger<UserService> logger;
-        readonly ApplicationContext db;
-        readonly IPasswordCryptor passwordCryptor;
-        readonly IHttpContextAccessor httpContextAccessor;
-        public UserService(ApplicationContext db, ILogger<UserService> logger, IPasswordCryptor passwordCryptor, IHttpContextAccessor httpContextAccessor)
-        {
-            this.db = db;
-            this.logger = logger;
-            this.passwordCryptor = passwordCryptor;
-            this.httpContextAccessor = httpContextAccessor;
-        }
-        public async Task<User?> GetUserAsync<T>(T id)
+        public async Task<User?> GetUserAsync<T>(T id, bool noTracking = false)
         {
             try
             {
@@ -47,8 +36,12 @@ namespace SportWeb.Services
                     logger.LogInformation("User is current user");
                     return await GetUserFromSession(intId);
                 }
-                var user = await db.Users.FirstOrDefaultAsync(u => u.Id == intId);
-                return user;
+                if (noTracking)
+                {
+                    return await db.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Id == intId);
+                }
+
+                return await db.Users.FirstOrDefaultAsync(u => u.Id == intId);
             }
             catch (Exception ex)
             {
@@ -125,7 +118,7 @@ namespace SportWeb.Services
                     return false;
                 }
 
-                User? user = GetUserAsync(id).Result;
+                User? user = await GetUserAsync(id);
                 if (user == null)
                 {
                     logger.LogWarning("User not found");
@@ -168,7 +161,6 @@ namespace SportWeb.Services
             }
             return intId;
         }
-        
     }
 }
 

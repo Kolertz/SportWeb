@@ -11,5 +11,7 @@ namespace SportWeb.Models
         public string? Id { get; set; }
         public IEnumerable<Exercise>? AddedExercises { get; set; }
         public int AddedExercisesCount { get; set; }
+        public IEnumerable<Workout>? AddedWorkouts { get; set; }
+        public int AddedWorkoutsCount { get; set; }
     }
 }

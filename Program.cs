@@ -6,13 +6,17 @@ using SportWeb.Models;
 using SportWeb.Services;
 using SportWeb.Filters;
 using Microsoft.AspNetCore.Rewrite;
+using System.Text.Json.Serialization;
 var builder = WebApplication.CreateBuilder(args);
 // Add services to the container.  
 builder.Services.AddControllersWithViews(options =>
 {
     options.Filters.Add<MessageFilter>();
-});
-
+})
+.AddJsonOptions(options =>
+ {
+     options.JsonSerializerOptions.ReferenceHandler = ReferenceHandler.Preserve;
+ });
 string? connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
 builder.Services.AddDbContext<ApplicationContext>(options => options.UseSqlServer(connectionString));
 
@@ -69,6 +73,7 @@ builder.Services.AddTransient<IPasswordCryptor, PasswordCryptor>();
 builder.Services.AddTransient<IFileService, FileService>();
 builder.Services.AddTransient<IPictureService, PictureService>();
 builder.Services.AddTransient<IPaginationService, PaginationService>();
+builder.Services.AddScoped<IWorkoutService, WorkoutService>();
 
 var app = builder.Build();
 // Исключение сжатия для малых ответов

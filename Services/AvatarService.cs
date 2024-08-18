@@ -10,15 +10,10 @@ namespace SportWeb.Services
         string GetAvatarPath(string avatarName);
         string GetAvatarUrl(string avatarName);
     }
-    public class AvatarService : IAvatarService
+    public class AvatarService(ILogger<AvatarService> logger, IWebHostEnvironment env) : IAvatarService
     {
-        private readonly ILogger logger;
-        private readonly IWebHostEnvironment env;
-        public AvatarService(ILogger<AvatarService> logger, IWebHostEnvironment env)
-        {
-            this.logger = logger;
-            this.env = env;
-        }
+        private readonly ILogger logger = logger;
+
         public string NewAvatarName(User user)
         {
 

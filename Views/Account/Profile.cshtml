@@ -4,6 +4,15 @@
 }
 <!DOCTYPE html>
 <html>
+<head>
+    <style>
+        .rectangle-border {
+            border: 2px solid black; /* Ширина и цвет рамки */
+            padding: 20px; /* Внутренний отступ */
+            margin: 20px; /* Внешний отступ */
+        }
+    </style>
+</head>
 <body>
     <header>
         @if (ViewBag.Message != null)
@@ -19,7 +28,6 @@
         <a asp-action="Edit" asp-controller="Account" asp-route-id="@Model.Id">Edit Profile</a>
     }
     <div><strong>Exercises added by user(@Model.AddedExercisesCount):</strong></div>
-    <ul>
         @if (Model.AddedExercises == null)
         {
             <p>No exercises added</p>
@@ -31,14 +39,42 @@
                 count++;
                 if (count == 4)
                 {
-                    <p>...</p>
-                    <a asp-controller="Exercises" asp-action="UserExercises" asp-route-id="@Model.Id"></a>
+                    <p>
+                        <a asp-controller="Exercises" asp-action="UserExercises" asp-route-id="@Model.Id" asp-route-exercises="@Model.AddedExercises" asp-route-username="@Model.Name">more...</a>
+                    </p>
+                
                     break;
                 }
-                <a asp-action="Details" asp-controller="Exercises" asp-route-id="@exercise.Id">@exercise.Name</a>
+            <div class="rectangle-border">
+                <h3><a asp-action="Details" asp-controller="Exercises" asp-route-id="@exercise.Id">@exercise.Name</a></h3>
+                <p>@exercise.Description</p>
+            </div>
             }
         }
-    </ul>
+    <div><strong>Public User's Workouts(@Model.AddedWorkoutsCount):</strong></div>
+    @if (Model.AddedWorkouts == null)
+    {
+        <p>No workouts added</p>
+    }
+    else
+    {
+        var count = 0;
+        @foreach (var workout in Model.AddedWorkouts)
+        {
+            count++;
+            if (count == 4)
+            {
+                <p>
+                    <a asp-controller="Workouts" asp-action="UserWorkouts" asp-route-id="@Model.Id" asp-route-exercises="@Model.AddedWorkouts" asp-route-username="@Model.Name">more...</a>
+                </p>
+                break;
+            }
+            <div class="rectangle-border">
+                <h3><a asp-action="Details" asp-controller="Workout" asp-route-id="@workout.Id">@workout.Name</a></h3>
+                <p>@workout.Description</p>
+            </div>
+        }
+    }
     <footer>
         <a asp-action="Index" asp-controller="Home">Back to Home</a>
     </footer>

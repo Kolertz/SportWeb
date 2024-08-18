@@ -7,15 +7,8 @@ namespace SportWeb.Services
     {
         Task UploadFile(IFormFile fileUpload, string filePath);
     }
-    public class FileService : IFileService
+    public class FileService(ILogger<FileService> logger) : IFileService
     {
-        private readonly ILogger<FileService> logger;
-
-        public FileService(ILogger<FileService> logger)
-        {
-            this.logger = logger;
-        }
-
         public async Task UploadFile(IFormFile fileUpload, string filePath)
         {
             try

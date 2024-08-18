@@ -8,14 +8,8 @@ using SportWeb.Services;
 namespace SportWeb.Controllers
 {
     [Authorize(Policy = "AdminOnly")]
-    public class AdminController : ControllerBase
+    public class AdminController(ApplicationContext context, ILogger<ControllerBase> logger, IUserService userService, IFileService fileService, IPaginationService paginationService) : ControllerBase(context, logger, userService, fileService)
     {
-        IPaginationService paginationService;
-        public AdminController(ApplicationContext context, ILogger<ControllerBase> logger, IUserService userService, IFileService fileService, IPaginationService paginationService)
-            :base(context, logger, userService, fileService)
-        {
-            this.paginationService = paginationService;
-        }
         public IActionResult Index()
         {
             return View();

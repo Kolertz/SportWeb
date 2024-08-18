@@ -1,0 +1,9 @@
+﻿@model Workout
+<br />
+
+<form asp-action="Create">
+    <label asp-for="Name">Enter your new workout's title:</label>
+    <input type="text" asp-for="Name"/>
+
+    <input type="submit" value="Create" />
+</form>

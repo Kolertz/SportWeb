@@ -1,8 +1,17 @@
-﻿<!DOCTYPE html>
+﻿@{
+    var currentAction = ViewContext.RouteData.Values["action"]?.ToString();
+}
+<!DOCTYPE html>
 <html>
 <head>
     <meta name="viewport" content="width=device-width" />
     <title>SPORTWeb | @ViewBag.Title</title>
+    <style>
+        .select2-container {
+            width: 300px !important;
+        }
+    </style>
+
     <style>
         .rectangle-border {
             border: 2px solid black; /* Ширина и цвет рамки */
@@ -10,11 +19,7 @@
             margin: 20px; /* Внешний отступ */
         }
     </style>
-    <style>
-        .select2-container {
-            width: 300px !important;
-        }
-    </style>
+    
     <!-- Подключение jQuery -->
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 
@@ -37,7 +42,13 @@
         @RenderBody()
     </div>
     <footer>
-        <a asp-action="Index">Back to All Exercises</a>
+        @if (currentAction != "Index")
+        {
+            <a asp-action="Index">Back to All Exercises</a>
+        } else
+        {
+            <a asp-controller="Home" asp-action="Index">Back to Start Page</a>
+        }
         <p>© Kolerts 2024</p>
     </footer>
 </body>

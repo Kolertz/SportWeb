@@ -4,25 +4,37 @@ using SportWeb.Services;
 using SportWeb.Models.Entities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc.Rendering;
+using SportWeb.Extensions;
 
 namespace SportWeb.Controllers
 {
-    public class ExercisesController : ControllerBase
+    public class ExercisesController(ApplicationContext context, ILogger<ControllerBase> logger, IUserService userService, IFileService fileService, IPictureService pictureService, IPaginationService paginationService, IAuthorizationService authorizationService) : ControllerBase(context, logger, userService, fileService)
     {
-        IPictureService pictureService;
-        IPaginationService paginationService;
-        IAuthorizationService authorizationService;
-        public ExercisesController(ApplicationContext context, ILogger<ControllerBase> logger, IUserService userService, IFileService fileService, IPictureService pictureService, IPaginationService paginationService, IAuthorizationService authorizationService)
-            : base(context, logger, userService, fileService)
+        public async Task<IActionResult> Index( int? muscle, int? movement, int? tag, int? equipment, string? name, int page = 1, int pageSize = 5)
         {
-            this.pictureService = pictureService;
-            this.paginationService = paginationService;
-            this.authorizationService = authorizationService;
-        }
-        public async Task<IActionResult> Index(int page = 1, int pageSize = 5)
-        {
-            IQueryable<Exercise> exercises = db.Exercises.Where(x => x.State == ExerciseState.Approved).Include(u => u.User).OrderBy(x => x.Id);
-            (var items, var model) = await paginationService.GetPaginatedResultAsync(exercises, page, pageSize);
+            IQueryable<Exercise> exercises = db.Exercises.Where(x => x.State == ExerciseState.Approved).Include(u => u.User).Include(c => c.Categories).OrderBy(x => x.Id);
+            if (muscle != null && muscle != 0)
+            {
+                exercises = exercises.Where(e => e.Categories!.Any(c => c.Id == muscle));
+            }
+            if (movement != null && movement != 0)
+            {
+                exercises = exercises.Where(e => e.Categories!.Any(c => c.Id == movement));
+            }
+            if (tag != null && tag != 0)
+            {
+                exercises = exercises.Where(e => e.Categories!.Any(c => c.Id == tag));
+            }
+            if (equipment != null && equipment != 0)
+            {
+                exercises = exercises.Where(e => e.Categories!.Any(c => c.Id == equipment));
+            }
+            if (name != null && name.Length > 1)
+            {
+                exercises = exercises.Where(p => p.Name.Contains(name));
+            }
+            (var items, var paginationModel) = await paginationService.GetPaginatedResultAsync(exercises, page, pageSize);
             var result = items.Select(x => new
             {
                 x.Id,
@@ -32,6 +44,33 @@ namespace SportWeb.Controllers
                 Username = x.User != null ? x.User.Name : "Unknown"
             }).ToList();
             ViewBag.Exercises = result;
+
+            var categories = db.Categories.ToList();
+            var movements = categories.Where(x => x.Type == "Movement Pattern").ToList();
+            var tags = categories.Where(x => x.Type == "Other").ToList();
+            var equipments = categories.Where(x => x.Type == "Equipment").ToList();
+            var muscles = categories.Where(x => x.Type == "Muscle Group").ToList();
+
+            movements.Insert(0, new Category { Name = "All", Id = 0 });
+            tags.Insert(0, new Category { Name = "All", Id = 0 });
+            equipments.Insert(0, new Category { Name = "All", Id = 0 });
+            muscles.Insert(0, new Category { Name = "All", Id = 0 });
+
+            ViewBag.SelectedWorkout = HttpContext.Session.Get<Workout>("SelectedWorkout");
+
+            var exerciseFilterModel = new ExerciseFilterModel
+            {
+                Movements = new SelectList(movements, "Id", "Name", movement),
+                Tags = new SelectList(tags, "Id", "Name", tag),
+                Equipments = new SelectList(equipments, "Id", "Name", equipment),
+                Muscles = new SelectList(muscles, "Id", "Name", muscle),
+                Name = name
+            };
+            var model = new IndexExercisesViewModel
+            {
+                FilterModel = exerciseFilterModel,
+                PaginationModel = paginationModel
+            };
             return View(model);
         }
         public async Task<IActionResult> Details(int id)
@@ -123,7 +162,7 @@ namespace SportWeb.Controllers
         }
         [HttpPost]
         [Authorize]
-        public async Task<IActionResult> Edit(EditExerciseViewModel model, string? returnUrl)
+        public async Task<IActionResult> Edit(EditExerciseViewModel model)
         {
             var exercise = model.Exercise;
             if (!ModelState.IsValid || exercise == null)
@@ -153,18 +192,21 @@ namespace SportWeb.Controllers
             db.Exercises.Update(exercise);
             await db.SaveChangesAsync();
             TempData["Message"] = "Exercise edited successfully!";
-            /*
-            if (returnUrl != null && Url.IsLocalUrl(returnUrl))
-            {
-                return Redirect(returnUrl);
-            }
-            */
+
             return RedirectToAction(nameof(Index));
         }
         [Route("Profile/{id}/Exercises")]
-        public IActionResult UserExercises(int id)
+        public async Task<IActionResult> UserExercises(int id, int page = 1, int pageSize = 5, string username = "???")
         {
-            return View();
+            var isUserExercises = userService.IsCurrentUser(id);
+            IQueryable<Exercise> exercises = db.Exercises.OrderBy(x => x.Id);
+            (var items, var model) = await paginationService.GetPaginatedResultAsync(exercises, page, pageSize);
+            ViewBag.Id = id;
+            ViewBag.Exercises = items;
+            ViewBag.Username = username;
+            ViewBag.IsUserExercises = isUserExercises;
+            ViewBag.Workout = HttpContext.Session.Get<Workout>("SelectedWorkout");
+            return View(model);
         }
     }
 }

@@ -5,6 +5,7 @@ using SportWeb.Extensions;
 using SportWeb.Services;
 using Microsoft.AspNetCore.Http.HttpResults;
 using SportWeb.Models.Entities;
+using SportWeb.Models;
 namespace SportWeb.Components
 {
     public class ProfileHeaderComponent : ViewComponent
@@ -20,34 +21,31 @@ namespace SportWeb.Components
         }
         public async Task<IViewComponentResult> InvokeAsync()
         {
-            if (User.Identity != null && User.Identity.IsAuthenticated)
-            {
-                string id = User.Identity.Name!;
-                logger.LogInformation($"User is authenticated, his id is {id}");
-                User? user = await userService.GetUserAsync(id);
-                if (user != null)
-                {
-                    logger.LogInformation($"User name: {user.Name}");
-                    var avatar = avatarService.GetAvatarUrl(user.Avatar);
-                    var modelAuth = new
-                    {
-                        UserName = user.Name,
-                        Avatar = avatar,
-                        Id = id,
-                    };
-                    ViewBag.Model = modelAuth;
-                    logger.LogInformation($"Avatar url: {avatar}");
-                    return View("ProfileHeader");
-                }
-            }
-            var model = new
+            var model = new ProfileHeaderViewModel
             {
                 UserName = "Anonymous",
                 Avatar = "img/avatar.png",
                 Id = "",
             };
-            ViewBag.Model = model;
-            return View("ProfileHeader");
+            if (User.Identity != null && User.Identity.IsAuthenticated)
+            {
+                string id = User.Identity.Name!;
+                logger.LogWarning($"User is authenticated, his id is {id}");
+                User? user = await userService.GetUserAsync(id, true);
+                if (user != null)
+                {
+                    logger.LogInformation($"User name: {user.Name}");
+                    var avatar = avatarService.GetAvatarUrl(user.Avatar);
+                    model.UserName = user.Name;
+                    model.Avatar = avatar;
+                    model.Id = id;
+                }
+            } else
+            {
+                logger.LogWarning("User is not authenticated");
+            }
+            
+            return View("ProfileHeader", model);
         }
     }
 }

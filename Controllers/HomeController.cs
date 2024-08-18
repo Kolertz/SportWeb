@@ -3,22 +3,19 @@ using SportWeb.Models;
 using System.Diagnostics;
 using SportWeb.Services;
 using Microsoft.AspNetCore.Authorization;
+using SportWeb.Models.Entities;
+using SportWeb.Extensions;
 
 namespace SportWeb.Controllers
 {
-    public class HomeController : ControllerBase
+    public class HomeController(ApplicationContext context, ILogger<AccountController> logger, IUserService userService, IAuthorizationService authorizationService, IFileService fileService) : ControllerBase(context, logger, userService, fileService)
     {
-        IAuthorizationService authorizationService;
-        public HomeController(ApplicationContext context, ILogger<AccountController> logger, IUserService userService, IAuthorizationService authorizationService, IFileService fileService)
-            : base(context, logger, userService, fileService)
-        {
-            this.authorizationService = authorizationService;
-        }
-
-        public IActionResult Index()
+        public async Task <IActionResult> Index()
         {
             bool isAdmin = authorizationService.AuthorizeAsync(User, "AdminOnly").Result.Succeeded;
             ViewBag.IsAdmin = isAdmin;
+            var user = await userService.GetUserAsync(User.Identity!.Name, true);
+            ViewBag.User = user;
             return View();
         }
        

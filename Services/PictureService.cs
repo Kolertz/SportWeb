@@ -10,15 +10,10 @@ namespace SportWeb.Services
         string GetPicturePath(string pictureName);
         string GetPictureUrl(string pictureName);
     }
-    public class PictureService : IPictureService
+    public class PictureService(ILogger<PictureService> logger, IWebHostEnvironment env) : IPictureService
     {
-        private readonly ILogger logger;
-        private readonly IWebHostEnvironment env;
-        public PictureService(ILogger<PictureService> logger, IWebHostEnvironment env)
-        {
-            this.logger = logger;
-            this.env = env;
-        }
+        private readonly ILogger logger = logger;
+
         public string NewPictureName(Exercise exercise)
         {
             string pictureUrl = exercise.PictureUrl;

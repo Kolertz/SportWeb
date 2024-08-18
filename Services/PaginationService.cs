@@ -10,7 +10,6 @@ namespace SportWeb.Services
     }
     public class PaginationService : IPaginationService
     {
-        public PaginationService() { }
         public async Task<(List<T> items, PaginationModel)> GetPaginatedResultAsync<T>(IQueryable<T> query, int page, int pageSize)
         {
             var total = await query.CountAsync();

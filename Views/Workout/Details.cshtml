@@ -1,0 +1,41 @@
+﻿@model Workout
+@{
+    var workoutItems = ViewBag.workoutItems as List<object>;
+}
+@if (workoutItems != null)
+{
+    @foreach (var item in workoutItems)
+    {
+        @if (item is WorkoutExercise)
+        {
+            var workoutExercise = item as WorkoutExercise;
+            var exercise = workoutExercise!.Exercise;
+
+            <div class="rectangle-border">
+                <h3><a asp-action="Details" asp-controller="Exercises" asp-route-id="@exercise.Id">@exercise.Name</a></h3>
+                <p>@exercise.Description</p>
+                <a asp-controller="Account" asp-action="Profile" asp-route-id="@exercise.AuthorId">@exercise.User?.Name</a>
+            </div>
+
+        } else if (item is Superset)
+        {
+            var superset = item as Superset;
+            @foreach (var workoutExercise in (superset).WorkoutExercises)
+            {
+                var exercise = workoutExercise!.Exercise;
+
+                <div class="rectangle-border">
+                    <h3><a asp-action="Details" asp-controller="Exercises" asp-route-id="@exercise.Id">@exercise.Name</a></h3>
+                    <p>@exercise.Description</p>
+                    <a asp-controller="Account" asp-action="Profile" asp-route-id="@exercise.AuthorId">@exercise.User?.Name</a>
+                </div>
+            }
+        }
+    }
+}
+@if (Model.AuthorId.ToString() == User.Identity?.Name)
+{
+    <a asp-action="Save" asp-route-workoutId="@Model.Id">Edit Workout</a>
+    <br />
+}
+<a asp-action="UserWorkouts" asp-route-id="@Model.AuthorId">Back to Workouts</a>

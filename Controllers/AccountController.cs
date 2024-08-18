@@ -14,23 +14,15 @@ using SportWeb.Models.Entities;
 
 namespace SportWeb.Controllers
 {
-    public class AccountController : ControllerBase
+    public class AccountController(ApplicationContext context, ILogger<AccountController> logger, IUserService userService, IPasswordCryptor passwordCryptor, IAvatarService avatarService, IFileService fileService) : ControllerBase(context, logger, userService, fileService)
     {
-        readonly IAvatarService avatarService;
-        readonly IPasswordCryptor passwordCryptor;
-        public AccountController(ApplicationContext context, ILogger<AccountController> logger, IUserService userService, IPasswordCryptor passwordCryptor, IAvatarService avatarService, IFileService fileService)
-            : base(context, logger, userService, fileService)
-        {
-            this.passwordCryptor = passwordCryptor;
-            this.avatarService = avatarService;
-        }
         [HttpGet]
         public ActionResult Login()
         {
             return View();
         }
         [HttpPost]
-        public async Task<ActionResult> Login(User form)
+        public async Task<ActionResult> Login(User form, string? returnUrl)
         {
             var context = Request.HttpContext;
             User? user = db.Users.FirstOrDefault(u => u.Email == form.Email);
@@ -51,6 +43,12 @@ namespace SportWeb.Controllers
             ClaimsIdentity claimsIdentity = new(claims, "Cookies");
             await context.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, new ClaimsPrincipal(claimsIdentity));
             TempData["Message"] = "Logged in successfully";
+            
+            if (returnUrl != null && Url.IsLocalUrl(returnUrl))
+            {
+                return Redirect(returnUrl);
+            }
+            
             return Redirect("/");
         }
         [HttpGet]
@@ -89,16 +87,23 @@ namespace SportWeb.Controllers
             return Redirect("/");
         }
 
-        public IActionResult Profile(string id)
+        [Route("Profile/{id})")]
+        public async Task<IActionResult> Profile(string id)
         {
-            User? user = userService.GetUserAsync(id).Result;
+            User? user = await userService.GetUserAsync(id, true);
             if (user == null)
             {
                 return NotFound();
             }
-            var isUserProfile = User.Identity!.Name == id;//User != null && User.HasClaim(c => c.Type == "Id") && User.FindFirst(c => c.Type == "Id").Value == Model.Id.ToString();
+            var isUserProfile = userService.IsCurrentUser(int.Parse(id));
             var addedExercises = db.Exercises.Where(x => x.AuthorId == user.Id).ToList();
             var addedExercisesCount = addedExercises.Count;
+            addedExercises = addedExercises.Take(4).ToList();
+
+            var addedWorkouts = db.Workouts.Where(x => x.AuthorId == user.Id && x.IsPublic).ToList();
+            var addedWorkoutsCount = addedWorkouts.Count;
+            addedWorkouts = addedWorkouts.Take(4).ToList();
+
             var model = new ProfileViewModel
             {
                 IsUserProfile = isUserProfile,
@@ -107,19 +112,21 @@ namespace SportWeb.Controllers
                 Description = user.Description,
                 Id = user.Id.ToString(),
                 AddedExercises = addedExercises,
-                AddedExercisesCount = addedExercisesCount
+                AddedExercisesCount = addedExercisesCount,
+                AddedWorkouts = addedWorkouts,
+                AddedWorkoutsCount = addedWorkoutsCount
             };
             return View(model);
         }
         [Authorize]
-        public IActionResult Edit(string id, string returnUrl)
+        public async Task <IActionResult> Edit(string id)
         {
             if (User.Identity!.Name != id)
             {
                 return Redirect("/");
             }
 
-            User? user = userService.GetUserAsync(id).Result;
+            User? user = await userService.GetUserAsync(id, true);
 
             EditProfileViewModel model = new EditProfileViewModel
             {
@@ -136,7 +143,7 @@ namespace SportWeb.Controllers
         {
             if (ModelState.IsValid)
             {
-                User? user = await userService.GetUserAsync(id);
+                User? user = await userService.GetUserAsync(id, false);
                 if (user == null)
                 {
                     logger.LogWarning($"User with id {id} not found.");

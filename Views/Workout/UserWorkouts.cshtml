@@ -1,0 +1,36 @@
+﻿@model PaginationModel
+@{
+    var name = ViewBag.Username;
+    var isUserWorkouts = ViewBag.IsUserWorkouts;
+    var workouts = ViewBag.Workouts as List<Workout>;
+}
+@if (!isUserWorkouts)
+{
+    <h2>@name's Workouts</h2>
+} else
+{
+    <h2>My Workouts</h2>
+}
+
+@if ( workouts == null || workouts.Count == 0)
+{
+<p>No Workouts.</p>
+} else
+{
+    @foreach (var workout in workouts)
+    {
+        <div class="rectangle-border">
+            <h3><a asp-action="Details" asp-controller="Workout" asp-route-id="@workout.Id">@workout.Name</a></h3>
+            <p>@workout.Description</p>
+        </div>
+    }
+}
+
+<page-link page-model="@Model" page-action="Index"></page-link>
+@if (isUserWorkouts)
+{
+    <a asp-controller="Workout" asp-action="Create">Create new Workout</a>
+}
+<footer>
+    <a asp-controller="Account" asp-action="Profile" asp-route-id="@ViewBag.Id">Back to Profile</a>
+</footer>
