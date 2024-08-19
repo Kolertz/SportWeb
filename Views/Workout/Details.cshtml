@@ -9,8 +9,16 @@
         @if (item is WorkoutExercise)
         {
             var workoutExercise = item as WorkoutExercise;
-            var exercise = workoutExercise!.Exercise;
-
+            
+            if (workoutExercise == null)
+            {
+                continue;
+            }
+            var exercise = workoutExercise.Exercise;
+            if (exercise == null)
+            {
+                continue;
+            }
             <div class="rectangle-border">
                 <h3><a asp-action="Details" asp-controller="Exercises" asp-route-id="@exercise.Id">@exercise.Name</a></h3>
                 <p>@exercise.Description</p>
@@ -20,6 +28,10 @@
         } else if (item is Superset)
         {
             var superset = item as Superset;
+            if (superset == null)
+            {
+                continue;
+            }
             @foreach (var workoutExercise in (superset).WorkoutExercises)
             {
                 var exercise = workoutExercise!.Exercise;

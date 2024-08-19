@@ -14,11 +14,15 @@ namespace SportWeb.TagHelpers
         {
             _urlHelperFactory = helperFactory;
         }
+
         [ViewContext]
         [HtmlAttributeNotBound]
         public ViewContext ViewContext { get; set; } = null!;
+
         [HtmlAttributeName("pagination-model")]
         public PaginationModel? PaginationModel { get; set; }
+
+        [HtmlAttributeName("page-action")]
         public string? PageAction { get; set; }
 
         public override void Process(TagHelperContext context, TagHelperOutput output)
@@ -41,11 +45,12 @@ namespace SportWeb.TagHelpers
                 a.AddCssClass("page-link");
                 a.InnerHtml.Append(i.ToString());
                 a.Attributes["href"] = urlHelper.Action(PageAction, new { page = i });
-                a.InnerHtml.Append(i.ToString());
 
                 li.InnerHtml.AppendHtml(a);
                 ul.InnerHtml.AppendHtml(li);
             }
+
+            output.Content.AppendHtml(ul);
         }
     }
 }

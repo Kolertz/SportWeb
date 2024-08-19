@@ -8,7 +8,7 @@ using SportWeb.Extensions;
 
 namespace SportWeb.Controllers
 {
-    public class HomeController(ApplicationContext context, ILogger<AccountController> logger, IUserService userService, IAuthorizationService authorizationService, IFileService fileService) : ControllerBase(context, logger, userService, fileService)
+    public class HomeController(IUserService userService, IAuthorizationService authorizationService) : Controller
     {
         public async Task <IActionResult> Index()
         {

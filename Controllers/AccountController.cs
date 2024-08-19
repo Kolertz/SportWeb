@@ -14,13 +14,17 @@ using SportWeb.Models.Entities;
 
 namespace SportWeb.Controllers
 {
-    public class AccountController(ApplicationContext context, ILogger<AccountController> logger, IUserService userService, IPasswordCryptor passwordCryptor, IAvatarService avatarService, IFileService fileService) : ControllerBase(context, logger, userService, fileService)
+    public class AccountController(
+        ApplicationContext db,
+        ILogger<AccountController> logger,
+        IUserService userService,
+        IPasswordCryptor passwordCryptor,
+        IAvatarService avatarService,
+        IFileService fileService) : Controller
     {
         [HttpGet]
-        public ActionResult Login()
-        {
-            return View();
-        }
+        public ActionResult Login() => View();
+
         [HttpPost]
         public async Task<ActionResult> Login(User form, string? returnUrl)
         {
@@ -51,11 +55,10 @@ namespace SportWeb.Controllers
             
             return Redirect("/");
         }
+
         [HttpGet]
-        public ActionResult Register()
-        {
-            return View();
-        }
+        public ActionResult Register() => View();
+
         [HttpPost]
         [ValidateAntiForgeryToken]
         public ActionResult Register(RegisterViewModel form)
@@ -107,7 +110,7 @@ namespace SportWeb.Controllers
             var model = new ProfileViewModel
             {
                 IsUserProfile = isUserProfile,
-                Name = user.Name,
+                Name = user.Name ?? "Unknown",
                 Avatar = avatarService.GetAvatarUrl(user.Avatar),
                 Description = user.Description,
                 Id = user.Id.ToString(),
@@ -118,6 +121,7 @@ namespace SportWeb.Controllers
             };
             return View(model);
         }
+
         [Authorize]
         public async Task <IActionResult> Edit(string id)
         {
@@ -127,7 +131,10 @@ namespace SportWeb.Controllers
             }
 
             User? user = await userService.GetUserAsync(id, true);
-
+            if (user == null)
+            {
+                return NotFound();
+            }
             EditProfileViewModel model = new EditProfileViewModel
             {
                 Name = user.Name,
@@ -137,6 +144,7 @@ namespace SportWeb.Controllers
             };
             return View(model);
         }
+
         [HttpPost]
         [Authorize]
         public async Task<IActionResult> Edit(string id, EditProfileViewModel model)
@@ -177,6 +185,7 @@ namespace SportWeb.Controllers
             logger.LogWarning("Model state is invalid.");
             return View(id); // Вернуться на ту же страницу в случае ошибки
         }
+
         [HttpPost]
         [Authorize]
         [ValidateAntiForgeryToken]

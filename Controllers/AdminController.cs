@@ -8,12 +8,12 @@ using SportWeb.Services;
 namespace SportWeb.Controllers
 {
     [Authorize(Policy = "AdminOnly")]
-    public class AdminController(ApplicationContext context, ILogger<ControllerBase> logger, IUserService userService, IFileService fileService, IPaginationService paginationService) : ControllerBase(context, logger, userService, fileService)
+    public class AdminController(
+        ApplicationContext db,
+        ILogger<ControllerBase> logger,
+        IPaginationService paginationService) : Controller
     {
-        public IActionResult Index()
-        {
-            return View();
-        }
+        public IActionResult Index() => View();
         public async Task<IActionResult> PendingExercises(int page = 1, int pageSize = 5)
         {
             IQueryable<Exercise> exercises = db.Exercises.Where(x => x.State == ExerciseState.Pending).OrderBy(x => x.Id);

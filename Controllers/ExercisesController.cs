@@ -9,7 +9,14 @@ using SportWeb.Extensions;
 
 namespace SportWeb.Controllers
 {
-    public class ExercisesController(ApplicationContext context, ILogger<ControllerBase> logger, IUserService userService, IFileService fileService, IPictureService pictureService, IPaginationService paginationService, IAuthorizationService authorizationService) : ControllerBase(context, logger, userService, fileService)
+    public class ExercisesController(
+        ApplicationContext db,
+        ILogger<ControllerBase> logger,
+        IUserService userService,
+        IFileService fileService,
+        IPictureService pictureService,
+        IPaginationService paginationService,
+        IAuthorizationService authorizationService) : Controller
     {
         public async Task<IActionResult> Index( int? muscle, int? movement, int? tag, int? equipment, string? name, int page = 1, int pageSize = 5)
         {
@@ -96,6 +103,7 @@ namespace SportWeb.Controllers
 
             return View(model);
         }
+
         [HttpGet]
         [Authorize]
         public IActionResult Add()
@@ -105,6 +113,7 @@ namespace SportWeb.Controllers
             var model = new EditExerciseViewModel {  Categories = categories, Exercise = emptyExercise };
             return View(model);
         }
+
         [HttpPost]
         [Authorize]
         public async Task<IActionResult> Add(EditExerciseViewModel model)
@@ -142,6 +151,7 @@ namespace SportWeb.Controllers
             TempData["Message"] = "Exercise created successfully!";
             return Redirect("/Exercises");
         }
+
         [Authorize]
         public async Task<IActionResult> Edit(int id)
         {
@@ -160,6 +170,7 @@ namespace SportWeb.Controllers
             var model = new EditExerciseViewModel { Exercise = exercise, Categories = categories };
             return View(model);
         }
+
         [HttpPost]
         [Authorize]
         public async Task<IActionResult> Edit(EditExerciseViewModel model)
@@ -195,6 +206,7 @@ namespace SportWeb.Controllers
 
             return RedirectToAction(nameof(Index));
         }
+
         [Route("Profile/{id}/Exercises")]
         public async Task<IActionResult> UserExercises(int id, int page = 1, int pageSize = 5, string username = "???")
         {

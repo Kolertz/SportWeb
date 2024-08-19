@@ -9,30 +9,38 @@ namespace SportWeb.Services
     public interface IWorkoutService
     {
         List<object> SortWorkoutItems(List<WorkoutExercise> exercises, List<Superset> supersets);
-        Task<Workout?> GetWorkoutAsync(int id);
+        Task<Workout?> GetWorkoutAsync(int id, bool noTracking = false);
     }
-    public class WorkoutService(IHttpContextAccessor httpContextAccessor, ApplicationContext db) : IWorkoutService
+    public class WorkoutService(IHttpContextAccessor httpContextAccessor, ApplicationContext db, ILogger<WorkoutService> logger) : IWorkoutService
     {
-        public async Task<Workout?> GetWorkoutAsync(int id)
+        public async Task<Workout?> GetWorkoutAsync(int id, bool noTracking = false)
         {
             var context = httpContextAccessor.HttpContext;
+            /*
             Workout? workout = null;
             if (context != null && context.Session.Keys.Contains("SelectedWorkout"))
             {
                 workout = context.Session.Get<Workout>("SelectedWorkout");
-                if (workout?.Id == id)
-                {  
+                logger.LogInformation("Workout is in session");
+                if (workout != null && workout.Id == id)
+                {
+                    logger.LogInformation("Session's workout is correct");
                     return workout; 
                 }
             }
-            workout = await db.Workouts
+            */
+            logger.LogInformation("Workout is not in session");
+            IQueryable<Workout> query = db.Workouts
             .Include(x => x.Supersets)
             .Include(x => x.WorkoutExercises)
                 .ThenInclude(we => we.Exercise)
-                .ThenInclude(ex => ex.User)
-            .FirstOrDefaultAsync(x => x.Id == id);
+                .ThenInclude(ex => ex.User);
+            if (noTracking)
+            {
+                query = query.AsNoTracking();
+            }
 
-            return workout;
+            return await query.FirstOrDefaultAsync(w => w.Id == id);
         }
         public List<object> SortWorkoutItems(List<WorkoutExercise> exercises, List<Superset> supersets)
         {

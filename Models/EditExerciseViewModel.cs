@@ -4,7 +4,7 @@ namespace SportWeb.Models
 {
     public class EditExerciseViewModel
     {
-        public Exercise Exercise { get; set; }
+        public required Exercise Exercise { get; set; }
         public IFormFile? FileUpload { get; set; }
         public required IEnumerable<Category> Categories { get; set; }
         public IEnumerable<Category>? SelectedCategories { get; set; }

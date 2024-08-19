@@ -37,7 +37,7 @@
             <a asp-controller="Account" asp-action="Profile" asp-route-id="@item.AuthorId">@item.Username</a>
             @if (workout != null)
             {
-                <form asp-controller="Workout" asp-action="Save" asp-route-exerciseId="@item.Id" asp-route-workoutId="@workout.Id">
+                <form asp-controller="Workout" asp-action="AddExercise" asp-route-exerciseId="@item.Id" asp-route-workoutId="@workout.Id">
                     <button type="submit">Add Exercise to current workout</button>
                 </form>
             }
@@ -48,4 +48,4 @@
     <p>No exercises found.</p>
 }
 
-<page-link page-model="@Model" page-action="Index"></page-link>
+<pagination pagination-model="@Model.PaginationModel" page-action="Index"></pagination>

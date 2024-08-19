@@ -7,6 +7,7 @@ using SportWeb.Services;
 using SportWeb.Filters;
 using Microsoft.AspNetCore.Rewrite;
 using System.Text.Json.Serialization;
+using SportWeb.Middlewares;
 var builder = WebApplication.CreateBuilder(args);
 // Add services to the container.  
 builder.Services.AddControllersWithViews(options =>
@@ -18,7 +19,7 @@ builder.Services.AddControllersWithViews(options =>
      options.JsonSerializerOptions.ReferenceHandler = ReferenceHandler.Preserve;
  });
 string? connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
-builder.Services.AddDbContext<ApplicationContext>(options => options.UseSqlServer(connectionString));
+builder.Services.AddDbContext<ApplicationContext>(options => options.UseSqlServer(connectionString, o => o.UseQuerySplittingBehavior(QuerySplittingBehavior.SingleQuery)));
 
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
     .AddCookie(options =>
@@ -76,6 +77,9 @@ builder.Services.AddTransient<IPaginationService, PaginationService>();
 builder.Services.AddScoped<IWorkoutService, WorkoutService>();
 
 var app = builder.Build();
+
+app.UseMiddleware<RequestLoggingMiddleware>();
+
 // Исключение сжатия для малых ответов
 app.Use(async (context, next) =>
 {
@@ -92,7 +96,7 @@ app.Use(async (context, next) =>
         app.Logger.LogInformation("Response was compressed");
     }
 });
-// Configure the HTTP request pipeline.
+
 if (!app.Environment.IsDevelopment())
 {
     // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
