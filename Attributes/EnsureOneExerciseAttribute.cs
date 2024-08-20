@@ -7,7 +7,7 @@ namespace SportWeb.Attributes
     {
         protected override ValidationResult IsValid(object? value, ValidationContext validationContext)
         {
-            if (value is ICollection<WorkoutExercise> exercises && exercises.Count > 0)
+            if (value is ICollection<object> exercises && exercises.Any(e => e is Exercise))
             {
                 return ValidationResult.Success!;
             }

@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.ChangeTracking;
 using SportWeb.Extensions;
 using SportWeb.Migrations;
 using SportWeb.Models;
@@ -112,6 +113,39 @@ namespace SportWeb.Controllers
 
             return RedirectToAction(nameof(Save), new { workoutId });
         }
+
+        [HttpPost]
+        public async Task<IActionResult> AddSuperset(int workoutId)
+        {
+            // Получаем тренировку по workoutId
+            var workout = await workoutService.GetWorkoutAsync(workoutId);
+            if (workout == null)
+            {
+                return NotFound();
+            }
+            if (!userService.IsCurrentUser(workout.AuthorId))
+            {
+                return Forbid();
+            }
+
+            logger.LogInformation("Trying to add a superset to a workout...");
+            var exerciseCount = workout.WorkoutExercises == null ? 0 : workout.WorkoutExercises.Count + workout.Supersets.Count;
+
+            var newSuperset = new Superset
+            {
+                WorkoutId = workoutId,
+                Position = exerciseCount
+            };
+
+            workout.Supersets ??= [];
+            workout.Supersets.Add(newSuperset);
+
+            await db.SaveChangesAsync();
+
+            logger.LogInformation("Superset added to the workout successfully");
+
+            return RedirectToAction(nameof(Save), new { id = workoutId });
+        }
         //[Authorize]
         [Route("Workout/Save/{workoutId}")]
         public async Task<IActionResult> Save(int workoutId, bool? IsSupersetAdded = false)
@@ -149,27 +183,64 @@ namespace SportWeb.Controllers
                 superset.WorkoutExercises.OrderBy(we => we.Position);
             }
             var workoutItems = workoutService.SortWorkoutItems([.. workout.WorkoutExercises], [.. workout.Supersets]);
-            ViewBag.WorkoutItems = workoutItems;
             //ViewBag.Exercises = await db.WorkoutExercises.Where(x => x.WorkoutId == workoutId).Select(x => x.Exercise).ToListAsync();
             //var exercises = workout.WorkoutExercises?.OrderBy(x => x.Position).Select(we => we.Exercise).ToList();
-            return View(workout);
+            WorkoutViewModel model = new ()
+            {
+                Id = workout.Id,
+                IsPublic = workout.IsPublic,
+                Description = workout.Description,
+                WorkoutItems = workoutItems
+            };
+            return View(model);
         }
-        /*
+
         //[Authorize]
         [HttpPost]
-        public async Task<IActionResult> Save(Workout workout)
+        public async Task<IActionResult> SaveOrder(WorkoutViewModel model)
         {
-            logger.LogInformation("We are on the POST method");
-            if (!ModelState.IsValid)
+                logger.LogInformation("We are in the POST method");
+
+            if (model == null || !ModelState.IsValid)
             {
-                return View(workout);
+                var errors = ModelState
+                .Where(ms => ms.Value?.Errors.Count > 0)
+                .ToDictionary(
+                    kvp => kvp.Key,
+                    kvp => kvp.Value?.Errors.Select(e => e.ErrorMessage).ToArray()
+                );
+
+                    return BadRequest(new
+                    {
+                        Message = "Invalid workout data.",
+                        Errors = errors
+                    });
             }
 
-            db.Update(workout);
-            await db.SaveChangesAsync();
-            HttpContext.Session.Remove("SelectedWorkout");
-            return RedirectToAction(nameof(Details), new { id = workout.Id, workout });
+            var workout = await workoutService.GetWorkoutAsync(model.Id);
+            if (workout == null)
+            {
+                return NotFound();
+            }
+
+            try
+            {
+                workout.IsPublic = model.IsPublic;
+
+                // Создание словарей для быстрого доступа
+                var workoutExerciseDict = workout.WorkoutExercises.ToDictionary(x => x.ExerciseId);
+                var supersetDict = workout.Supersets.ToDictionary(x => x.Id);
+
+                await workoutService.UpdateWorkoutPositions(model.WorkoutItems, model.Id);
+                HttpContext.Session.Remove("SelectedWorkout");
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Error occurred while saving workout order.");
+                return StatusCode(500, "Internal server error");
+            }
+
+            return RedirectToAction(nameof(Details), new { id = model.Id });
         }
-        */
     }
 }
