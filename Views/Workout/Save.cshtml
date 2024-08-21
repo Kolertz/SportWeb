@@ -1,166 +1,161 @@
 ﻿@model WorkoutViewModel
 
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>@Model.Description - Workout</title>
-    <link href="https://code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css" rel="stylesheet">
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <script src="https://code.jquery.com/ui/1.12.1/jquery-ui.min.js"></script>
-    <style>
-        .rectangle-border {
-            border: 2px solid black;
-            padding: 20px;
-            margin: 20px;
-        }
+<!-- Основная форма для сохранения порядка -->
+<form id="saveOrderForm" asp-action="SaveOrder" asp-controller="Workout" method="post">
+    <input type="hidden" name="workoutId" value="@Model.Id" />
 
-        .sortable-item {
-            cursor: move;
-        }
-
-        .sortable-superset-exercises {
-            margin-top: 10px;
-            border-top: 2px dashed #ccc;
-            padding-top: 10px;
-            min-height: 50px;
-            background-color: #f9f9f9;
-            position: relative;
-        }
-
-            .sortable-superset-exercises.empty:before {
-                content: "Перетащите упражнение сюда";
-                color: #888;
-                font-size: 14px;
-                text-align: center;
-                position: absolute;
-                top: 50%;
-                left: 50%;
-                transform: translate(-50%, -50%);
-                pointer-events: none;
-            }
-    </style>
-</head>
-<body>
-    <h1>@Model.Description</h1>
-
-    <form method="post" action="@Url.Action("SaveOrder", "Workout")">
-        <input type="hidden" name="Id" value="@Model.Id" />
-        <input type="hidden" name="Description" value="@Model.Description" />
-        <label>
-            <input type="checkbox" name="IsPublic" value="true" @(Model.IsPublic ? "checked" : "") /> Public Workout
-        </label>
-        <div id="sortable">
-            @if (Model.WorkoutItems != null)
+    <div id="workout-container" class="workout-container">
+        @for (int i = 0; i < Model.WorkoutItems.Count; i++)
+        {
+            var item = Model.WorkoutItems.ElementAt(i);
+            if (item is WorkoutExercise exerciseItem && exerciseItem.SupersetId == null)
             {
-                @foreach (var item in Model.WorkoutItems)
-                {
-                    if (item is WorkoutExercise workoutExercise && workoutExercise.Exercise != null)
-                    {
-                        var exercise = workoutExercise.Exercise;
-                        <div class="sortable-item rectangle-border" data-id="@exercise.Id" data-type="exercise">
-                            <input type="hidden" name="WorkoutExercises[@exercise.Id].Id" value="@exercise.Id" />
-                            <input type="hidden" name="WorkoutExercises[@exercise.Id].Position" value="0" />
-                            <h3><a asp-action="Details" asp-controller="Exercises" asp-route-id="@exercise.Id">@exercise.Name</a></h3>
-                            <p>@exercise.Description</p>
-                            <a asp-controller="Account" asp-action="Profile" asp-route-id="@exercise.AuthorId">@exercise.User?.Name</a>
-                        </div>
-                    }
-                    else if (item is Superset superset && superset.WorkoutExercises != null)
-                    {
-                        <div class="sortable-superset rectangle-border" data-id="@superset.Id" data-type="superset">
-                            <input type="hidden" name="Supersets[@superset.Id].Id" value="@superset.Id" />
-                            <input type="hidden" name="Supersets[@superset.Id].Position" value="0" />
-                            <strong>Superset</strong>
-                            <div class="sortable-superset-exercises">
-                                @foreach (var workoutExerciseItem in superset.WorkoutExercises)
-                                {
-                                    var exercise = workoutExerciseItem?.Exercise;
-                                    if (exercise != null)
-                                    {
-                                        <div class="sortable-item rectangle-border" data-id="@exercise.Id" data-type="exercise">
-                                            <input type="hidden" name="Supersets[@superset.Id].Exercises[@exercise.Id].Id" value="@exercise.Id" />
-                                            <input type="hidden" name="Supersets[@superset.Id].Exercises[@exercise.Id].Position" value="0" />
-                                            <h3><a asp-action="Details" asp-controller="Exercises" asp-route-id="@exercise.Id">@exercise.Name</a></h3>
-                                            <p>@exercise.Description</p>
-                                            <a asp-controller="Account" asp-action="Profile" asp-route-id="@exercise.AuthorId">@exercise.User?.Name</a>
-                                        </div>
-                                    }
-                                }
+                var exercise = exerciseItem.Exercise;
+                <div class="sortable-item rectangle-border" data-id="@exercise.Id" data-type="exercise">
+                    <input type="hidden" name="WorkoutPositions[@i].Id" value="@exerciseItem.ExerciseId" form="saveOrderForm" />
+                    <input type="hidden" name="WorkoutPositions[@i].Position" value="@exerciseItem.Position" class="position-input" form="saveOrderForm" />
+                    <input type="hidden" name="WorkoutPositions[@i].IsSuperset" value="false" form="saveOrderForm" />
+                    <input type="hidden" name="WorkoutPositions[@i].SupersetId" value="" form="saveOrderForm" />
+
+                    <h3><a asp-action="Details" asp-controller="Exercises" asp-route-id="@exercise.Id">@exercise.Name</a></h3>
+                    <p>@exercise.Description</p>
+                    <a asp-controller="Account" asp-action="Profile" asp-route-id="@exercise.AuthorId">@exercise.User?.Name</a>
+
+                    <!-- Кнопка для удаления упражнения, привязанная к своей форме -->
+                    <br />
+                    <button type="submit" form="removeExerciseForm-@exercise.Id" class="btn btn-danger">Remove Exercise</button>
+                </div>
+            }
+            else if (item is Superset superset)
+            {
+                <div class="sortable-superset rectangle-border" data-id="@superset.Id" data-type="superset">
+                    <input type="hidden" name="WorkoutPositions[@i].Id" value="@superset.Id" form="saveOrderForm" />
+                    <input type="hidden" name="WorkoutPositions[@i].Position" value="@superset.Position" class="position-input" form="saveOrderForm" />
+                    <input type="hidden" name="WorkoutPositions[@i].IsSuperset" value="true" form="saveOrderForm" />
+                    <input type="hidden" name="WorkoutPositions[@i].SupersetId" value="0" form="saveOrderForm" />
+
+                    <strong>Superset @superset.Id</strong>
+
+                    <div class="sortable-superset-exercises @(superset.WorkoutExercises.Count == 0 ? "empty" : "")">
+                        @for (int j = 0; j < superset.WorkoutExercises.Count; j++)
+                        {
+                            var exerciseItemInSuperset = superset.WorkoutExercises.ElementAt(j);
+                            var exerciseInSuperset = exerciseItemInSuperset.Exercise;
+                            <div class="sortable-item rectangle-border" data-id="@exerciseInSuperset.Id" data-type="exercise">
+                                <input type="hidden" name="WorkoutPositions[@i + @j + 1].Id" value="@exerciseItemInSuperset.ExerciseId" form="saveOrderForm" />
+                                <input type="hidden" name="WorkoutPositions[@i + @j + 1].Position" value="@exerciseItemInSuperset.Position" class="position-input" form="saveOrderForm" />
+                                <input type="hidden" name="WorkoutPositions[@i + @j + 1].IsSuperset" value="false" form="saveOrderForm" />
+                                <input type="hidden" name="WorkoutPositions[@i + @j + 1].SupersetId" value="@superset.Id" form="saveOrderForm" />
+
+                                <h3><a asp-action="Details" asp-controller="Exercises" asp-route-id="@exerciseInSuperset.Id">@exerciseInSuperset.Name</a></h3>
+                                <p>@exerciseInSuperset.Description</p>
+                                <br />
+                                <!-- Кнопка для удаления упражнения, привязанная к своей форме -->
+                                <button type="submit" form="removeExerciseForm-@exerciseInSuperset.Id" class="btn btn-danger">Remove Exercise</button>
                             </div>
-                        </div>
-                    }
-                }
+                        }
+                    </div>
+
+                    <!-- Кнопка для удаления суперсета, привязанная к своей форме -->
+                    <button type="submit" form="removeSupersetForm-@superset.Id" class="btn btn-danger">Remove Superset</button>
+                </div>
             }
-        </div>
+        }
+    </div>
 
-        <button type="submit">Save Order</button>
-    </form>
+    <!-- Кнопка для сохранения порядка -->
+    <button type="submit" id="save-order-btn" class="btn btn-success">Save Order</button>
+</form>
 
-    <br />
-    <a asp-controller="Exercises" asp-action="Index">Add Exercise to Workout</a>
-    <br />
-    <form asp-controller="Workout" asp-action="AddSuperset" method="post">
+<!-- Формы для удаления упражнений -->
+@foreach (var item in Model.WorkoutItems.OfType<WorkoutExercise>())
+{
+    <form id="removeExerciseForm-@item.ExerciseId" asp-action="RemoveExercise" asp-controller="Workout" method="post">
         <input type="hidden" name="workoutId" value="@Model.Id" />
-        <button type="submit">Add Superset</button>
+        <input type="hidden" name="exerciseId" value="@item.ExerciseId" />
     </form>
-    <br />
-    <a asp-action="UserWorkouts" asp-route-id="@Model.Id">Back to Workout</a>
+}
 
+<!-- Формы для удаления суперсетов -->
+@foreach (var superset in Model.WorkoutItems.OfType<Superset>())
+{
+    <form id="removeSupersetForm-@superset.Id" asp-action="RemoveSuperset" asp-controller="Workout" method="post">
+        <input type="hidden" name="workoutId" value="@Model.Id" />
+        <input type="hidden" name="supersetId" value="@superset.Id" />
+    </form>
+}
+<br />
+<form asp-action="Index" asp-controller="Exercises">
+    <input type="hidden" name="workoutId" value="@Model.Id" />
+    <button type="submit" class="btn btn-primary">Add Exercise</button>
+</form>
+
+<form asp-action="AddSuperset" asp-controller="Workout" method="post" style="display:inline;">
+    <input type="hidden" name="workoutId" value="@Model.Id" />
+    <button type="submit" class="btn btn-primary">Add Superset</button>
+</form>
+
+@section Scripts {
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.14.0/Sortable.min.js"></script>
     <script>
-        $(function () {
-            function updateSupersetEmptyState() {
-                $(".sortable-superset-exercises").each(function () {
-                    if ($(this).children().length === 0) {
-                        $(this).addClass("empty");
-                    } else {
-                        $(this).removeClass("empty");
+        document.addEventListener("DOMContentLoaded", function () {
+            var workoutContainer = document.getElementById('workout-container');
+
+            // Initialize Sortable.js for drag & drop
+            new Sortable(workoutContainer, {
+                animation: 150,
+                group: {
+                    name: 'shared',
+                    pull: true,
+                    put: true
+                },
+                onEnd: function (evt) {
+                    updatePositions();
+                }
+            });
+
+            // Enable nested sorting within supersets
+            document.querySelectorAll('.sortable-superset-exercises').forEach(function (element) {
+                new Sortable(element, {
+                    group: 'shared',
+                    animation: 150,
+                    onEnd: function (evt) {
+                        updatePositions();
                     }
                 });
-            }
-
-            $("#sortable").sortable({
-                items: "> .sortable-item, > .sortable-superset",
-                connectWith: ".sortable-superset-exercises",
-                placeholder: "ui-state-highlight",
-                update: function () {
-                    updatePositions();
-                }
             });
 
-            $(".sortable-superset-exercises").sortable({
-                connectWith: "#sortable, .sortable-superset-exercises",
-                placeholder: "ui-state-highlight",
-                update: function () {
-                    updatePositions();
-                }
-            });
-
-            $("#sortable, .sortable-superset-exercises").disableSelection();
-
-            updateSupersetEmptyState();
-
+            // Update positions after sorting
             function updatePositions() {
-                var position = 1;
+                var items = workoutContainer.querySelectorAll('.sortable-item, .sortable-superset');
+                var globalPosition = 0; // Общая позиция для всех элементов
+                var supersetPositions = {}; // Отслеживание позиций внутри каждого суперсета
 
-                $('#sortable > .sortable-item').each(function () {
-                    if ($(this).data('type') === 'exercise') {
-                        var positionInput = $(this).find('input[name$="Position"]');
-                        positionInput.val(position++);
-                        console.log("Exercise Position:", positionInput.val());
+                items.forEach(function (item, index) {
+                    var positionInput = item.querySelector('.position-input');
+                    var isInSupersetInput = item.querySelector('input[name$=".SupersetId"]');
+                    var isSuperset = item.dataset.type === 'superset';
+
+                    if (isSuperset) {
+                        // Если это суперсет, то устанавливаем глобальную позицию для него
+                        positionInput.value = globalPosition++;
+                    } else {
+                        var supersetId = isInSupersetInput.value;
+
+                        if (supersetId && supersetId != "0") {
+                            // Если элемент внутри суперсета
+                            if (!supersetPositions[supersetId]) {
+                                supersetPositions[supersetId] = 0;
+                            }
+                            positionInput.value = supersetPositions[supersetId]++;
+                        } else {
+                            // Если элемент не внутри суперсета, то устанавливаем глобальную позицию
+                            positionInput.value = globalPosition++;
+                        }
                     }
                 });
-
-                $('.sortable-superset').each(function () {
-                    var supersetId = $(this).data('id');
-                    $(this).find('.sortable-superset-exercises > .sortable-item').each(function (index) {
-                        var positionInput = $(this).find('input[name$="Position"]');
-                        positionInput.val(index + 1);
-                        console.log("Superset Exercise Position:", positionInput.val());
-                    });
-                });
             }
+
         });
     </script>
-</body>
-</html>
+}

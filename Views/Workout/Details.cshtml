@@ -32,16 +32,25 @@
             {
                 continue;
             }
-            @foreach (var workoutExercise in (superset).WorkoutExercises)
-            {
-                var exercise = workoutExercise!.Exercise;
-
-                <div class="rectangle-border">
-                    <h3><a asp-action="Details" asp-controller="Exercises" asp-route-id="@exercise.Id">@exercise.Name</a></h3>
-                    <p>@exercise.Description</p>
-                    <a asp-controller="Account" asp-action="Profile" asp-route-id="@exercise.AuthorId">@exercise.User?.Name</a>
+            
+            <div class="sortable-superset rectangle-border" data-id="@superset.Id" data-type="superset">
+                <input type="hidden" name="WorkoutItems[@superset.Id].Id" value="@superset.Id" />
+                <input type="hidden" name="WorkoutItems[@superset.Id].Position" value="@superset.Position" class="position-input" />
+                <strong>Superset @superset.Id</strong>
+                <div class="sortable-superset-exercises @(superset.WorkoutExercises.Count == 0 ? "empty" : "")">
+                    @foreach (var workoutExercise in superset.WorkoutExercises)
+                    {
+                        var exerciseInSuperset = workoutExercise.Exercise;
+                        <div class="sortable-item rectangle-border" data-id="@exerciseInSuperset.Id" data-type="exercise">
+                            <input type="hidden" name="WorkoutItems[@exerciseInSuperset.Id].ExerciseId" value="@exerciseInSuperset.Id" />
+                            <input type="hidden" name="WorkoutItems[@exerciseInSuperset.Id].Position" value="@workoutExercise.Position" class="position-input" />
+                            <input type="hidden" name="WorkoutItems[@exerciseInSuperset.Id].SupersetId" value="@superset.Id" />
+                            <h3><a asp-action="Details" asp-controller="Exercises" asp-route-id="@exerciseInSuperset.Id">@exerciseInSuperset.Name</a></h3>
+                            <p>@exerciseInSuperset.Description</p>
+                        </div>
+                    }
                 </div>
-            }
+            </div>
         }
     }
 }

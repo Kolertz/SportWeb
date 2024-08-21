@@ -1,5 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using SportWeb.Extensions;
+using SportWeb.Migrations;
 using SportWeb.Models;
 using SportWeb.Models.Entities;
 using System.Linq;
@@ -45,6 +46,10 @@ namespace SportWeb.Services
         }
         public List<object> SortWorkoutItems(List<WorkoutExercise> exercises, List<Superset> supersets)
         {
+            foreach (var superset in supersets)
+            {
+                superset.WorkoutExercises = [.. superset.WorkoutExercises.OrderBy(we => we.Position)];
+            }
             var items = exercises.Cast<object>().Concat(supersets).Cast<object>().OrderBy(GetPosition).ToList();
             return items;
         }

@@ -5,10 +5,35 @@
     <title>SPORTWeb | @ViewBag.Title</title>
     <style>
         .rectangle-border {
-            border: 2px solid black; /* Ширина и цвет рамки */
-            padding: 20px;          /* Внутренний отступ */
-            margin: 20px;           /* Внешний отступ */
+            border: 2px solid black;
+            padding: 20px;
+            margin: 20px;
         }
+
+        .sortable-item {
+            cursor: move;
+        }
+
+        .sortable-superset-exercises {
+            margin-top: 10px;
+            border-top: 2px dashed #ccc;
+            padding-top: 10px;
+            min-height: 50px;
+            background-color: #f9f9f9;
+            position: relative;
+        }
+
+            .sortable-superset-exercises.empty:before {
+                content: "Drag exercise here";
+                color: #888;
+                font-size: 14px;
+                text-align: center;
+                position: absolute;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                pointer-events: none;
+            }
     </style>
 </head>
 <body>
@@ -23,6 +48,8 @@
     <div>
         @RenderBody()
     </div>
+
+    @RenderSection("Scripts", required: false)
     <footer>
         <p>© Kolerts 2024</p>
     </footer>

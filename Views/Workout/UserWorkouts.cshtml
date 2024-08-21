@@ -26,7 +26,8 @@
     }
 }
 
-<page-link page-model="@Model" page-action="Index"></page-link>
+<pagination pagination-model="@Model" page-action="Index"></pagination>
+
 @if (isUserWorkouts)
 {
     <a asp-controller="Workout" asp-action="Create">Create new Workout</a>
