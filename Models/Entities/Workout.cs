@@ -14,7 +14,7 @@ namespace SportWeb.Models.Entities
         [EnsureOneExercise]
         public ICollection<WorkoutExercise> WorkoutExercises { get; set; } = [];
         public ICollection<Superset> Supersets { get; set; } = [];
-        public int AuthorId { get; set; }
+        public int? AuthorId { get; set; }
 
         [JsonIgnore]
         public User? User { get; set; }

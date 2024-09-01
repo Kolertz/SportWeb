@@ -25,36 +25,36 @@
     <p>@Model.Description</p>
     @if (Model.IsUserProfile)
     {
-        <a asp-action="Edit" asp-controller="Account" asp-route-id="@Model.Id">Edit Profile</a>
+        <a asp-action="Edit" asp-controller="Account" >Edit Profile</a>
     }
     <div><strong>Exercises added by user(@Model.AddedExercisesCount):</strong></div>
-        @if (Model.AddedExercises == null)
-        {
-            <p>No exercises added</p>
-        } else
-        {
-            var count = 0;
-            @foreach (var exercise in Model.AddedExercises)
-            {
-                count++;
-                if (count == 4)
-                {
-                    <p>
-                        <a asp-controller="Exercises" asp-action="UserExercises" asp-route-id="@Model.Id" asp-route-exercises="@Model.AddedExercises" asp-route-username="@Model.Name">more...</a>
-                    </p>
-                
-                    break;
-                }
-            <div class="rectangle-border">
-                <h3><a asp-action="Details" asp-controller="Exercises" asp-route-id="@exercise.Id">@exercise.Name</a></h3>
-                <p>@exercise.Description</p>
-            </div>
-            }
-        }
-    <div><strong>Public User's Workouts(@Model.AddedWorkoutsCount):</strong></div>
-    @if (Model.AddedWorkouts == null)
+    @if (Model.AddedExercises == null || Model.AddedExercises.Count() == 0)
     {
-        <p>No workouts added</p>
+        <p>No exercises added.</p>
+    } else
+    {
+        var count = 0;
+        @foreach (var exercise in Model.AddedExercises)
+        {
+            count++;
+            if (count == 4)
+            {
+                <p>
+                    <a asp-controller="Exercises" asp-action="UserExercises" asp-route-id="@Model.Id" asp-route-username="@Model.Name">more...</a>
+                </p>
+                
+                break;
+            }
+        <div class="rectangle-border">
+            <h3><a asp-action="Details" asp-controller="Exercises" asp-route-id="@exercise.Id">@exercise.Name</a></h3>
+            <p>@exercise.Description</p>
+        </div>
+        }
+    }
+    <div><strong>Public User's Workouts(@Model.AddedWorkoutsCount):</strong></div>
+    @if (Model.AddedWorkouts == null || Model.AddedWorkouts.Count() == 0)
+    {
+        <p>No workouts added.</p>
     }
     else
     {
@@ -65,13 +65,38 @@
             if (count == 4)
             {
                 <p>
-                    <a asp-controller="Workouts" asp-action="UserWorkouts" asp-route-id="@Model.Id" asp-route-exercises="@Model.AddedWorkouts" asp-route-username="@Model.Name">more...</a>
+                    <a asp-controller="Workouts" asp-action="UserWorkouts" asp-route-id="@Model.Id" asp-route-username="@Model.Name">more...</a>
                 </p>
                 break;
             }
             <div class="rectangle-border">
                 <h3><a asp-action="Details" asp-controller="Workout" asp-route-id="@workout.Id">@workout.Name</a></h3>
                 <p>@workout.Description</p>
+            </div>
+        }
+    }
+    <div><strong>User's Favourite Exercises(@Model.FavouriteExercisesCount):</strong></div>
+    @if (Model.FavouriteExercises == null || Model.FavouriteExercises.Count() == 0)
+    {
+        <p>No favourite exercises.</p>
+    }
+    else
+    {
+        var count = 0;
+        @foreach (var exercise in Model.FavouriteExercises)
+        {
+            count++;
+            if (count == 4)
+            {
+                <p>
+                    <a asp-controller="Exercises" asp-action="Favourites" asp-route-id="@Model.Id" asp-route-username="@Model.Name">more...</a>
+                </p>
+
+                break;
+            }
+            <div class="rectangle-border">
+                <h3><a asp-action="Details" asp-controller="Exercises" asp-route-id="@exercise.Id">@exercise.Name</a></h3>
+                <p>@exercise.Description</p>
             </div>
         }
     }

@@ -18,7 +18,7 @@ namespace SportWeb.Attributes
                 }
 
                 // Проверка наличия хотя бы одного упражнения
-                if (items.Any(e => e is WorkoutExercise || e is Superset superset && superset.WorkoutExercises.Any()))
+                if (items.Any(e => e is WorkoutExercise || e is Superset superset && superset.WorkoutExercises.Count != 0))
                 {
                     return ValidationResult.Success!;
                 }

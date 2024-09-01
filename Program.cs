@@ -8,11 +8,13 @@ using SportWeb.Filters;
 using Microsoft.AspNetCore.Rewrite;
 using System.Text.Json.Serialization;
 using SportWeb.Middlewares;
+using Microsoft.AspNetCore.Mvc.ApplicationModels;
 var builder = WebApplication.CreateBuilder(args);
 // Add services to the container.  
 builder.Services.AddControllersWithViews(options =>
 {
     options.Filters.Add<MessageFilter>();
+    options.Conventions.Add(new RouteTokenTransformerConvention(new KebabCaseParameterTransformer()));
 })
 .AddJsonOptions(options =>
  {
@@ -29,9 +31,8 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
         options.AccessDeniedPath = "/Account/Login";
     });
 var admins = builder.Configuration.GetSection("Admins").Get<List<string>>();
-builder.Services.AddAuthorization(options =>
-{
-    options.AddPolicy("AdminOnly", policy =>
+builder.Services.AddAuthorizationBuilder()
+    .AddPolicy("AdminOnly", policy =>
     {
         policy.RequireAssertion(context =>
         {
@@ -39,7 +40,6 @@ builder.Services.AddAuthorization(options =>
             return id != null && admins!.Contains(id);
         });
     });
-});
 
 builder.Services.AddResponseCompression(options =>
 {
@@ -60,6 +60,13 @@ builder.Services.AddResponseCompression(options =>
     options.Providers.Add<BrotliCompressionProvider>();
     options.Providers.Add<GzipCompressionProvider>();
 });
+
+builder.Services.Configure<RouteOptions>(options =>
+{
+    options.LowercaseQueryStrings = true;
+    options.LowercaseUrls = true;
+});
+
 builder.Services.Configure<BrotliCompressionProviderOptions>(options => options.Level = System.IO.Compression.CompressionLevel.Optimal);
 builder.Services.Configure<GzipCompressionProviderOptions>(options => options.Level = System.IO.Compression.CompressionLevel.Optimal);
 
@@ -69,17 +76,22 @@ builder.Services.AddDistributedMemoryCache();// добавляем IDistributedMemoryCach
 builder.Services.AddSession();  // добавляем сервисы сессии
 
 builder.Services.AddTransient<IAvatarService, AvatarService>();
-builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddTransient<IPasswordCryptor, PasswordCryptor>();
 builder.Services.AddTransient<IFileService, FileService>();
 builder.Services.AddTransient<IPictureService, PictureService>();
 builder.Services.AddTransient<IPaginationService, PaginationService>();
+//builder.Services.AddScoped<IUserService, UserService>();
+builder.Services.AddScoped<IUserRepository, UserService>();
+builder.Services.AddScoped<IUserRoleService, UserService>();
+builder.Services.AddScoped<IUserSessionService, UserService>();
 builder.Services.AddScoped<IWorkoutService, WorkoutService>();
+builder.Services.AddScoped<IExerciseService, ExerciseService>();
+builder.Services.AddSingleton<IOutboundParameterTransformer, KebabCaseParameterTransformer>();
+
 
 var app = builder.Build();
 
 app.UseMiddleware<RequestLoggingMiddleware>();
-
 // Исключение сжатия для малых ответов
 app.Use(async (context, next) =>
 {
@@ -101,6 +113,9 @@ if (!app.Environment.IsDevelopment())
 {
     // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
     app.UseHsts();
+    app.UseExceptionHandler("/Home/Error");
+} else
+{
     app.UseDeveloperExceptionPage();
 }
 var options = new RewriteOptions().AddRedirectToHttpsPermanent();
@@ -112,7 +127,7 @@ app.UseStaticFiles(new StaticFileOptions()
 {
     OnPrepareResponse = ctx =>
     {
-        ctx.Context.Response.Headers["Cache-Control"] = "public, max-age:600";
+        ctx.Context.Response.Headers.CacheControl = "public, max-age:600";
     }
 });
 

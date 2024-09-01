@@ -39,17 +39,17 @@ namespace SportWeb.Migrations
 
             modelBuilder.Entity("ExerciseUser", b =>
                 {
-                    b.Property<int>("FavoriteExercisesId")
+                    b.Property<int>("FavouriteExercisesId")
                         .HasColumnType("int");
 
-                    b.Property<int>("UsersWhoFavoritedId")
+                    b.Property<int>("UsersWhoFavouritedId")
                         .HasColumnType("int");
 
-                    b.HasKey("FavoriteExercisesId", "UsersWhoFavoritedId");
+                    b.HasKey("FavouriteExercisesId", "UsersWhoFavouritedId");
 
-                    b.HasIndex("UsersWhoFavoritedId");
+                    b.HasIndex("UsersWhoFavouritedId");
 
-                    b.ToTable("ExerciseUser");
+                    b.ToTable("FavouriteExercises", (string)null);
                 });
 
             modelBuilder.Entity("SportWeb.Models.Entities.Category", b =>
@@ -80,7 +80,7 @@ namespace SportWeb.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
-                    b.Property<int>("AuthorId")
+                    b.Property<int?>("AuthorId")
                         .HasColumnType("int");
 
                     b.Property<string>("Description")
@@ -146,6 +146,9 @@ namespace SportWeb.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(450)");
 
+                    b.Property<bool>("IsPublicFavourites")
+                        .HasColumnType("bit");
+
                     b.Property<string>("Name")
                         .HasColumnType("nvarchar(max)");
 
@@ -168,7 +171,7 @@ namespace SportWeb.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
-                    b.Property<int>("AuthorId")
+                    b.Property<int?>("AuthorId")
                         .HasColumnType("int");
 
                     b.Property<string>("Description")
@@ -233,13 +236,13 @@ namespace SportWeb.Migrations
                 {
                     b.HasOne("SportWeb.Models.Entities.Exercise", null)
                         .WithMany()
-                        .HasForeignKey("FavoriteExercisesId")
+                        .HasForeignKey("FavouriteExercisesId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.HasOne("SportWeb.Models.Entities.User", null)
                         .WithMany()
-                        .HasForeignKey("UsersWhoFavoritedId")
+                        .HasForeignKey("UsersWhoFavouritedId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });
@@ -249,8 +252,7 @@ namespace SportWeb.Migrations
                     b.HasOne("SportWeb.Models.Entities.User", "User")
                         .WithMany("Exercises")
                         .HasForeignKey("AuthorId")
-                        .OnDelete(DeleteBehavior.NoAction)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.SetNull);
 
                     b.Navigation("User");
                 });
@@ -271,8 +273,7 @@ namespace SportWeb.Migrations
                     b.HasOne("SportWeb.Models.Entities.User", "User")
                         .WithMany("Workouts")
                         .HasForeignKey("AuthorId")
-                        .OnDelete(DeleteBehavior.NoAction)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.SetNull);
 
                     b.Navigation("User");
                 });
@@ -287,7 +288,8 @@ namespace SportWeb.Migrations
 
                     b.HasOne("SportWeb.Models.Entities.Superset", "Superset")
                         .WithMany("WorkoutExercises")
-                        .HasForeignKey("SupersetId");
+                        .HasForeignKey("SupersetId")
+                        .OnDelete(DeleteBehavior.NoAction);
 
                     b.HasOne("SportWeb.Models.Entities.Workout", "Workout")
                         .WithMany("WorkoutExercises")

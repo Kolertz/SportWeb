@@ -16,10 +16,10 @@ namespace SportWeb.Models.Entities
         public required string Description { get; set; }
         public ExerciseState State { get; set; } = ExerciseState.Pending;
         public List<Category>? Categories { get; set; }
-        public int AuthorId { get; set; }
+        public int? AuthorId { get; set; }
         [JsonIgnore]
         public User? User { get; set; }
-        public ICollection<User>? UsersWhoFavorited { get; set; }
-        public ICollection<WorkoutExercise>? WorkoutExercises { get; set; }
+        public ICollection<User> UsersWhoFavourited { get; set; } = [];
+        public ICollection<WorkoutExercise> WorkoutExercises { get; set; } = [];
     }
 }

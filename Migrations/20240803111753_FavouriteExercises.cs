@@ -5,7 +5,7 @@
 namespace SportWeb.Migrations
 {
     /// <inheritdoc />
-    public partial class FavouriteExercises : Migration
+    public partial class favoriteExercises : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -18,30 +18,30 @@ namespace SportWeb.Migrations
                 name: "ExerciseUser",
                 columns: table => new
                 {
-                    FavoriteExercisesId = table.Column<int>(type: "int", nullable: false),
-                    UsersWhoFavoritedId = table.Column<int>(type: "int", nullable: false)
+                    favoriteExercisesId = table.Column<int>(type: "int", nullable: false),
+                    UsersWhofavoritedId = table.Column<int>(type: "int", nullable: false)
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_ExerciseUser", x => new { x.FavoriteExercisesId, x.UsersWhoFavoritedId });
+                    table.PrimaryKey("PK_ExerciseUser", x => new { x.favoriteExercisesId, x.UsersWhofavoritedId });
                     table.ForeignKey(
-                        name: "FK_ExerciseUser_Exercises_FavoriteExercisesId",
-                        column: x => x.FavoriteExercisesId,
+                        name: "FK_ExerciseUser_Exercises_favoriteExercisesId",
+                        column: x => x.favoriteExercisesId,
                         principalTable: "Exercises",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                     table.ForeignKey(
-                        name: "FK_ExerciseUser_Users_UsersWhoFavoritedId",
-                        column: x => x.UsersWhoFavoritedId,
+                        name: "FK_ExerciseUser_Users_UsersWhofavoritedId",
+                        column: x => x.UsersWhofavoritedId,
                         principalTable: "Users",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                 });
 
             migrationBuilder.CreateIndex(
-                name: "IX_ExerciseUser_UsersWhoFavoritedId",
+                name: "IX_ExerciseUser_UsersWhofavoritedId",
                 table: "ExerciseUser",
-                column: "UsersWhoFavoritedId");
+                column: "UsersWhofavoritedId");
 
             migrationBuilder.AddForeignKey(
                 name: "FK_Exercises_Users_AuthorId",

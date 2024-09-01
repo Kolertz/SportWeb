@@ -9,5 +9,6 @@ namespace SportWeb.Models
         public ICollection<object> WorkoutItems { get; set; } = [];
         public bool IsPublic { get; set; }
         public string Description { get; set; } = "No Description";
+        public int? AuthorId { get; set; }
     }
 }

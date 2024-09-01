@@ -16,11 +16,10 @@
             var requestId = Guid.NewGuid().ToString();
             using (_logger.BeginScope("RequestId: {RequestId}", requestId))
             {
-                _logger.LogInformation($"========== Start of Request {requestId}=============================================");
+                _logger.LogInformation($"========== Start of Request {requestId}; {DateTime.UtcNow:HH:mm:ss.fff}=============================================");
 
                 await _next(context);
-
-                _logger.LogInformation($"========== End of Request {requestId}===============================================");
+                _logger.LogInformation($"========== End of Request {requestId}; {DateTime.UtcNow:HH:mm:ss.fff}===============================================");
             }
         }
     }

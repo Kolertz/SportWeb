@@ -3,6 +3,7 @@ using System.Text.RegularExpressions;
 
 namespace SportWeb.Attributes
 {
+    [Obsolete("Use built-in attributes instead")]
     public class PasswordAttribute : ValidationAttribute
     {
         protected override ValidationResult IsValid(object? value, ValidationContext validationContext)

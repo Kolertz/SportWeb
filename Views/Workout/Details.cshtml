@@ -1,62 +1,56 @@
-﻿@model Workout
-@{
-    var workoutItems = ViewBag.workoutItems as List<object>;
-}
-@if (workoutItems != null)
-{
-    @foreach (var item in workoutItems)
-    {
-        @if (item is WorkoutExercise)
-        {
-            var workoutExercise = item as WorkoutExercise;
-            
-            if (workoutExercise == null)
-            {
-                continue;
-            }
-            var exercise = workoutExercise.Exercise;
-            if (exercise == null)
-            {
-                continue;
-            }
-            <div class="rectangle-border">
-                <h3><a asp-action="Details" asp-controller="Exercises" asp-route-id="@exercise.Id">@exercise.Name</a></h3>
-                <p>@exercise.Description</p>
-                <a asp-controller="Account" asp-action="Profile" asp-route-id="@exercise.AuthorId">@exercise.User?.Name</a>
-            </div>
+﻿@model WorkoutViewModel
 
-        } else if (item is Superset)
+<div>
+    <h2>Workout Details</h2>
+
+    <!-- Отображение флага публичности тренировки -->
+    <p><strong>Is Public:</strong> @(Model.IsPublic ? "Yes" : "No")</p>
+
+    <!-- Отображение описания тренировки -->
+    <p><strong>Description:</strong> @Model.Description</p>
+
+    <div id="workout-container" class="workout-container">
+        @for (int i = 0; i < Model.WorkoutItems.Count; i++)
         {
-            var superset = item as Superset;
-            if (superset == null)
+            var item = Model.WorkoutItems.ElementAt(i);
+            if (item is WorkoutExercise exerciseItem && exerciseItem.SupersetId == null)
             {
-                continue;
-            }
-            
-            <div class="sortable-superset rectangle-border" data-id="@superset.Id" data-type="superset">
-                <input type="hidden" name="WorkoutItems[@superset.Id].Id" value="@superset.Id" />
-                <input type="hidden" name="WorkoutItems[@superset.Id].Position" value="@superset.Position" class="position-input" />
-                <strong>Superset @superset.Id</strong>
-                <div class="sortable-superset-exercises @(superset.WorkoutExercises.Count == 0 ? "empty" : "")">
-                    @foreach (var workoutExercise in superset.WorkoutExercises)
-                    {
-                        var exerciseInSuperset = workoutExercise.Exercise;
-                        <div class="sortable-item rectangle-border" data-id="@exerciseInSuperset.Id" data-type="exercise">
-                            <input type="hidden" name="WorkoutItems[@exerciseInSuperset.Id].ExerciseId" value="@exerciseInSuperset.Id" />
-                            <input type="hidden" name="WorkoutItems[@exerciseInSuperset.Id].Position" value="@workoutExercise.Position" class="position-input" />
-                            <input type="hidden" name="WorkoutItems[@exerciseInSuperset.Id].SupersetId" value="@superset.Id" />
-                            <h3><a asp-action="Details" asp-controller="Exercises" asp-route-id="@exerciseInSuperset.Id">@exerciseInSuperset.Name</a></h3>
-                            <p>@exerciseInSuperset.Description</p>
-                        </div>
-                    }
+                var exercise = exerciseItem.Exercise;
+                <div class="rectangle-border" data-id="@exercise.Id">
+                    <h3><a asp-action="Details" asp-controller="Exercises" asp-route-id="@exercise.Id">@exercise.Name</a></h3>
+                    <p>@exercise.Description</p>
+                    <p><strong>Author:</strong><a asp-controller="Account" asp-action="Profile" asp-route-id="@exercise.AuthorId">@exercise.User?.Name</a></p>
                 </div>
-            </div>
+            }
+            else if (item is Superset superset)
+            {
+                <div class="rectangle-border" data-id="@superset.Id">
+                    <strong>Superset</strong>
+
+                    <div class="sortable-superset-exercises @(superset.WorkoutExercises.Count == 0 ? "empty" : "")">
+                        @for (int j = 0; j < superset.WorkoutExercises.Count; j++)
+                        {
+                            var exerciseItemInSuperset = superset.WorkoutExercises.ElementAt(j);
+                            var exerciseInSuperset = exerciseItemInSuperset.Exercise;
+                            <div class="rectangle-border" data-id="@exerciseInSuperset.Id">
+                                <h3><a asp-action="Details" asp-controller="Exercises" asp-route-id="@exerciseInSuperset.Id">@exerciseInSuperset.Name</a></h3>
+                                <p>@exerciseInSuperset.Description</p>
+                                <p><strong>Author:</strong><a asp-controller="Account" asp-action="Profile" asp-route-id="@exerciseInSuperset.AuthorId">@exerciseInSuperset.User?.Name</a></p>
+                            </div>
+                        }
+                    </div>
+                </div>
+            }
         }
+    </div>
+
+    <!-- Кнопка для перехода к редактированию, доступна только автору -->
+    @if (Model.AuthorId.ToString() == User.Identity?.Name)
+    {
+        <a asp-action="Save" asp-route-workoutId="@Model.Id" class="btn btn-warning">Edit Workout</a>
+        <br />
     }
-}
-@if (Model.AuthorId.ToString() == User.Identity?.Name)
-{
-    <a asp-action="Save" asp-route-workoutId="@Model.Id">Edit Workout</a>
-    <br />
-}
-<a asp-action="UserWorkouts" asp-route-id="@Model.AuthorId">Back to Workouts</a>
+
+    <!-- Кнопка возврата к списку тренировок пользователя -->
+    <a asp-action="UserWorkouts" asp-route-id="@Model.AuthorId" class="btn btn-primary">Back to Workouts</a>
+</div>

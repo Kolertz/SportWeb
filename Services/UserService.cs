@@ -1,26 +1,33 @@
-﻿using SportWeb.Models;
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using SportWeb.Extensions;
+using SportWeb.Models;
 using SportWeb.Models.Entities;
-using System.Text.RegularExpressions;
 
 namespace SportWeb.Services
 {
-    public interface IUserService
+    public interface IUserRepository
     {
-        Task<User?> GetUserAsync<T>(T id, bool noTracking = false);
-        Task<User?> AddUserAcync(string? name, string email, string password);
+        Task<User?> GetUserAsync<T>(T id, bool noTracking = false, string[]? includes = null);
+        Task<User?> AddUserAsync(string? name, string email, string password);
         Task<bool> RemoveUserAsync<T>(T id);
-        bool IsCurrentUser(int id);
         Task<bool> IsUserExistsByEmail(string email);
-        int CastToInt<T>(T id);
-        bool IsAdmin<T>(T id);
-        
     }
-    public class UserService(ApplicationContext db, ILogger<UserService> logger, IPasswordCryptor passwordCryptor, IHttpContextAccessor httpContextAccessor) : IUserService
+    public interface IUserSessionService
     {
-        public async Task<User?> GetUserAsync<T>(T id, bool noTracking = false)
+        Task<User?> GetUserFromSession(int id);
+        bool IsCurrentUser(int? id);
+        int? GetCurrentUserId();
+    }
+    public interface IUserRoleService
+    {
+        bool IsAdmin<T>(T id);
+    }
+
+    public class UserService(ApplicationContext db, ILogger<UserService> logger, IPasswordCryptor passwordCryptor, IHttpContextAccessor httpContextAccessor) : IUserRepository, IUserSessionService, IUserRoleService
+    {
+        public async Task<User?> GetUserAsync<T>(T id, bool noTracking = false, string[] ? includes = null)
         {
+
             try
             {
                 if (id == null)
@@ -31,17 +38,31 @@ namespace SportWeb.Services
 
                 int intId = CastToInt(id);
 
-                if (IsCurrentUser(intId))
+                if (IsCurrentUser(intId) && includes == null)
                 {
                     logger.LogInformation("User is current user");
-                    return await GetUserFromSession(intId);
+                    var user = await GetUserFromSession(intId);
+                    if (!noTracking && user != null && !db.Users.Local.Any(u => u.Id == intId))
+                    {
+                        db.Users.Attach(user);
+                    }
+                    return user;
+                }
+
+                IQueryable<User> query = db.Users;
+                if (includes != null)
+                {
+                    foreach (var include in includes)
+                    {
+                        query = query.Include(include);
+                    }
                 }
                 if (noTracking)
                 {
-                    return await db.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Id == intId);
+                    return await query.AsNoTracking().FirstOrDefaultAsync(u => u.Id == intId);
                 }
 
-                return await db.Users.FirstOrDefaultAsync(u => u.Id == intId);
+                return await query.FirstOrDefaultAsync(u => u.Id == intId);
             }
             catch (Exception ex)
             {
@@ -52,7 +73,7 @@ namespace SportWeb.Services
         public async Task<User?> GetUserFromSession(int id)
         {
             var context = httpContextAccessor.HttpContext;
-            if (context != null && context.User.Identity != null && context.User.Identity.Name == id.ToString())
+            if (context != null && GetCurrentUserId() == id)
             {
                 if (!context.Session.Keys.Contains("User"))
                 {
@@ -65,15 +86,15 @@ namespace SportWeb.Services
             return null;
         }
 
-        public bool IsCurrentUser(int id)
+        public bool IsCurrentUser(int? id)
         {
-            var context = httpContextAccessor.HttpContext;
-            return context?.User?.Identity?.Name == id.ToString();
+            var userId = GetCurrentUserId();
+            return userId.ToString() == id.ToString();
         }
 
         private async Task SetUserToSession(int id)
         {
-            var user = await db.Users.FirstOrDefaultAsync(u => u.Id == id);
+            var user = await db.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Id == id);
             if (user != null)
             {
                 SetUserToSession(user);
@@ -90,11 +111,11 @@ namespace SportWeb.Services
             }
         }
 
-        public async Task<User?> AddUserAcync(string? name, string email, string password)
+        public async Task<User?> AddUserAsync(string? name, string email, string password)
         {
             try
             {
-                User newUser = new User { Name = name, Email = email, Password = passwordCryptor.Hash(password)};
+                User newUser = new() { Name = name, Email = email, Password = passwordCryptor.Hash(password)};
                 await db.Users.AddAsync(newUser);
                 await db.SaveChangesAsync();
 
@@ -160,6 +181,15 @@ namespace SportWeb.Services
                 intId = parsedId;
             }
             return intId;
+        }
+        public int? GetCurrentUserId()
+        {
+            var context = httpContextAccessor.HttpContext;
+            if (context != null && context.User.Identity != null && context.User.Identity.Name != null)
+            {
+                return int.Parse(context.User.Identity.Name);
+            }
+            return null;
         }
     }
 }

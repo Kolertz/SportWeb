@@ -10,13 +10,14 @@ namespace SportWeb.Controllers
     [Authorize(Policy = "AdminOnly")]
     public class AdminController(
         ApplicationContext db,
-        ILogger<ControllerBase> logger,
+        ILogger<AdminController> logger,
+        IExerciseService exerciseService,
         IPaginationService paginationService) : Controller
     {
         public IActionResult Index() => View();
         public async Task<IActionResult> PendingExercises(int page = 1, int pageSize = 5)
         {
-            IQueryable<Exercise> exercises = db.Exercises.Where(x => x.State == ExerciseState.Pending).OrderBy(x => x.Id);
+            IQueryable<Exercise> exercises = db.Exercises.Where(x => x.State == ExerciseState.Pending).Include(u => u.User).OrderBy(x => x.Id);
             (var items, var model) = await paginationService.GetPaginatedResultAsync(exercises, page, pageSize);
             var result = items.Select(x => new
             {
@@ -46,7 +47,7 @@ namespace SportWeb.Controllers
         }
         public async Task<IActionResult> Approve(int id)
         {
-            var exercise = db.Exercises.FirstOrDefault(x => x.Id == id);
+            var exercise = await exerciseService.GetExerciseAsync(id);
             if (exercise == null) 
             { 
                 TempData["Message"] = "Exercise not found!";
@@ -62,7 +63,7 @@ namespace SportWeb.Controllers
 
         public async Task<IActionResult> Reject(int id)
         {
-            var exercise = db.Exercises.FirstOrDefault(x => x.Id == id);
+            var exercise = await exerciseService.GetExerciseAsync(id);
             if (exercise == null)
             {
                 TempData["Message"] = "Exercise not found!";

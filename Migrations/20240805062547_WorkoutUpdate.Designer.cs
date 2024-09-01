@@ -41,15 +41,15 @@ namespace SportWeb.Migrations
 
             modelBuilder.Entity("ExerciseUser", b =>
                 {
-                    b.Property<int>("FavoriteExercisesId")
+                    b.Property<int>("favoriteExercisesId")
                         .HasColumnType("int");
 
-                    b.Property<int>("UsersWhoFavoritedId")
+                    b.Property<int>("UsersWhofavoritedId")
                         .HasColumnType("int");
 
-                    b.HasKey("FavoriteExercisesId", "UsersWhoFavoritedId");
+                    b.HasKey("favoriteExercisesId", "UsersWhofavoritedId");
 
-                    b.HasIndex("UsersWhoFavoritedId");
+                    b.HasIndex("UsersWhofavoritedId");
 
                     b.ToTable("ExerciseUser");
                 });
@@ -202,13 +202,13 @@ namespace SportWeb.Migrations
                 {
                     b.HasOne("SportWeb.Models.Entities.Exercise", null)
                         .WithMany()
-                        .HasForeignKey("FavoriteExercisesId")
+                        .HasForeignKey("favoriteExercisesId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.HasOne("SportWeb.Models.Entities.User", null)
                         .WithMany()
-                        .HasForeignKey("UsersWhoFavoritedId")
+                        .HasForeignKey("UsersWhofavoritedId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });

@@ -1,4 +1,4 @@
-namespace SportWeb.Models
+﻿namespace SportWeb.Models
 {
     public class ErrorViewModel
     {
@@ -6,4 +6,5 @@ namespace SportWeb.Models
 
         public bool ShowRequestId => !string.IsNullOrEmpty(RequestId);
     }
+
 }

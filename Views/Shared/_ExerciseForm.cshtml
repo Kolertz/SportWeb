@@ -1,5 +1,5 @@
 ﻿@model EditExerciseViewModel
-<form asp-action="@ViewBag.Action" method="post" enctype="multipart/form-data>">
+<form asp-action="@ViewBag.Action" method="post" enctype="multipart/form-data">
     <div class="form-group">
         <label asp-for="Exercise.Name"></label>
         <input type="text" asp-for="Exercise.Name" class="form-control" />
@@ -31,6 +31,7 @@
     <input type="hidden" asp-for="Exercise.Id" />
     <input type="hidden" asp-for="Exercise.AuthorId" />
     <input type="hidden" asp-for="Exercise.PictureUrl" />
+    <input type="hidden" asp-for="Categories" />
 </form>
 
 <script>

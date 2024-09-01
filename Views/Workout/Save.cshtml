@@ -2,7 +2,10 @@
 
 <!-- Основная форма для сохранения порядка -->
 <form id="saveOrderForm" asp-action="SaveOrder" asp-controller="Workout" method="post">
-    <input type="hidden" name="workoutId" value="@Model.Id" />
+    <input type="hidden" name="workoutId" value="@Model.Id"/>
+    <input type="checkbox" name="isPublic" value="true" form="saveOrderForm" @(Model.IsPublic ? "checked" : "")> Is Public?
+    <br />
+    <textarea name="description" rows="4" form="saveOrderForm" placeholder="Write something..." >@Model.Description</textarea>
 
     <div id="workout-container" class="workout-container">
         @for (int i = 0; i < Model.WorkoutItems.Count; i++)
@@ -19,7 +22,7 @@
 
                     <h3><a asp-action="Details" asp-controller="Exercises" asp-route-id="@exercise.Id">@exercise.Name</a></h3>
                     <p>@exercise.Description</p>
-                    <a asp-controller="Account" asp-action="Profile" asp-route-id="@exercise.AuthorId">@exercise.User?.Name</a>
+                    <p><strong>Author:</strong><a asp-controller="Account" asp-action="Profile" asp-route-id="@exercise.AuthorId">@exercise.User?.Name</a></p>
 
                     <!-- Кнопка для удаления упражнения, привязанная к своей форме -->
                     <br />
@@ -34,7 +37,7 @@
                     <input type="hidden" name="WorkoutPositions[@i].IsSuperset" value="true" form="saveOrderForm" />
                     <input type="hidden" name="WorkoutPositions[@i].SupersetId" value="0" form="saveOrderForm" />
 
-                    <strong>Superset @superset.Id</strong>
+                    <strong>Superset</strong>
 
                     <div class="sortable-superset-exercises @(superset.WorkoutExercises.Count == 0 ? "empty" : "")">
                         @for (int j = 0; j < superset.WorkoutExercises.Count; j++)
@@ -49,6 +52,7 @@
 
                                 <h3><a asp-action="Details" asp-controller="Exercises" asp-route-id="@exerciseInSuperset.Id">@exerciseInSuperset.Name</a></h3>
                                 <p>@exerciseInSuperset.Description</p>
+                                <p><strong>Author:</strong><a asp-controller="Account" asp-action="Profile" asp-route-id="@exerciseInSuperset.AuthorId">@exerciseInSuperset.User?.Name</a></p>
                                 <br />
                                 <!-- Кнопка для удаления упражнения, привязанная к своей форме -->
                                 <button type="submit" form="removeExerciseForm-@exerciseInSuperset.Id" class="btn btn-danger">Remove Exercise</button>
@@ -64,13 +68,13 @@
     </div>
 
     <!-- Кнопка для сохранения порядка -->
-    <button type="submit" id="save-order-btn" class="btn btn-success">Save Order</button>
+    <button type="submit" id="save-order-btn" class="btn btn-success" form="saveOrderForm">Save</button>
 </form>
 
 <!-- Формы для удаления упражнений -->
 @foreach (var item in Model.WorkoutItems.OfType<WorkoutExercise>())
 {
-    <form id="removeExerciseForm-@item.ExerciseId" asp-action="RemoveExercise" asp-controller="Workout" method="post">
+    <form id="removeExerciseForm-@item.ExerciseId" asp-action="RemoveExercise" asp-controller="Workout" method="post" style="display:none;">
         <input type="hidden" name="workoutId" value="@Model.Id" />
         <input type="hidden" name="exerciseId" value="@item.ExerciseId" />
     </form>
@@ -79,11 +83,12 @@
 <!-- Формы для удаления суперсетов -->
 @foreach (var superset in Model.WorkoutItems.OfType<Superset>())
 {
-    <form id="removeSupersetForm-@superset.Id" asp-action="RemoveSuperset" asp-controller="Workout" method="post">
+    <form id="removeSupersetForm-@superset.Id" asp-action="RemoveSuperset" asp-controller="Workout" method="post" style="display:none;">
         <input type="hidden" name="workoutId" value="@Model.Id" />
         <input type="hidden" name="supersetId" value="@superset.Id" />
     </form>
 }
+
 <br />
 <form asp-action="Index" asp-controller="Exercises">
     <input type="hidden" name="workoutId" value="@Model.Id" />
@@ -94,12 +99,16 @@
     <input type="hidden" name="workoutId" value="@Model.Id" />
     <button type="submit" class="btn btn-primary">Add Superset</button>
 </form>
+<br />
+<a asp-action="UserWorkouts" asp-route-id="@Model.AuthorId">Back to Workouts</a>
+
 
 @section Scripts {
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.14.0/Sortable.min.js"></script>
     <script>
         document.addEventListener("DOMContentLoaded", function () {
             var workoutContainer = document.getElementById('workout-container');
+            var saveOrderForm = document.getElementById('saveOrderForm');
 
             // Initialize Sortable.js for drag & drop
             new Sortable(workoutContainer, {
@@ -111,6 +120,7 @@
                 },
                 onEnd: function (evt) {
                     updatePositions();
+                    checkSupersets();
                 }
             });
 
@@ -125,37 +135,106 @@
                 });
             });
 
+            // Функция для проверки супесетов и скрытия текста
+            function checkSupersets() {
+                document.querySelectorAll('.sortable-superset-exercises').forEach(function (element) {
+                    if (element.children.length > 0) {
+                        element.classList.remove('empty');
+                    } else {
+                        element.classList.add('empty');
+                    }
+                });
+            }
             // Update positions after sorting
             function updatePositions() {
                 var items = workoutContainer.querySelectorAll('.sortable-item, .sortable-superset');
                 var globalPosition = 0; // Общая позиция для всех элементов
                 var supersetPositions = {}; // Отслеживание позиций внутри каждого суперсета
+                var index = 0; // Индекс для WorkoutPositions
 
-                items.forEach(function (item, index) {
+                items.forEach(function (item) {
                     var positionInput = item.querySelector('.position-input');
-                    var isInSupersetInput = item.querySelector('input[name$=".SupersetId"]');
+                    var supersetIdInput = item.querySelector('input[name$=".SupersetId"]');
                     var isSuperset = item.dataset.type === 'superset';
 
                     if (isSuperset) {
-                        // Если это суперсет, то устанавливаем глобальную позицию для него
+                        // Обрабатываем суперсет: устанавливаем глобальную позицию и обновляем позиции его элементов
                         positionInput.value = globalPosition++;
+                        globalPosition = updateSupersetChildren(item, item.dataset.id, globalPosition, index);
                     } else {
-                        var supersetId = isInSupersetInput.value;
+                        if (item.closest('.sortable-superset-exercises')) {
+                            // Если элемент внутри суперсета, обновляем его позицию и SupersetId
+                            var parentSuperset = item.closest('.sortable-superset');
+                            var parentSupersetId = parentSuperset.dataset.id;
 
-                        if (supersetId && supersetId != "0") {
-                            // Если элемент внутри суперсета
-                            if (!supersetPositions[supersetId]) {
-                                supersetPositions[supersetId] = 0;
+                            if (!supersetPositions[parentSupersetId]) {
+                                supersetPositions[parentSupersetId] = 0;
                             }
-                            positionInput.value = supersetPositions[supersetId]++;
+                            positionInput.value = supersetPositions[parentSupersetId]++;
+                            supersetIdInput.value = parentSupersetId;
                         } else {
-                            // Если элемент не внутри суперсета, то устанавливаем глобальную позицию
+                            // Если элемент не в суперсете, обновляем глобальную позицию и очищаем SupersetId
+                            supersetIdInput.value = ""; // Очищаем SupersetId
                             positionInput.value = globalPosition++;
                         }
                     }
+
+                    // Обновляем имена полей с правильным индексом
+                    positionInput.name = `WorkoutPositions[${index}].Position`;
+                    item.querySelector('input[name$=".Id"]').name = `WorkoutPositions[${index}].Id`;
+                    item.querySelector('input[name$=".IsSuperset"]').name = `WorkoutPositions[${index}].IsSuperset`;
+                    item.querySelector('input[name$=".SupersetId"]').name = `WorkoutPositions[${index}].SupersetId`;
+
+                    index++;
+                });
+
+                // Логгируем данные перед отправкой для проверки
+                console.log("Updated Workout Positions:");
+                items.forEach(function (item) {
+                    var positionInput = item.querySelector('.position-input');
+                    var supersetIdInput = item.querySelector('input[name$=".SupersetId"]');
+                    console.log(`Id: ${item.dataset.id}, Position: ${positionInput.value}, SupersetId: ${supersetIdInput.value}`);
                 });
             }
 
+            // Обновление позиций дочерних элементов внутри суперсета
+            function updateSupersetChildren(superset, supersetId, globalPosition, index) {
+                var childItems = superset.querySelectorAll('.sortable-item');
+                childItems.forEach(function (childItem, i) {
+                    var positionInput = childItem.querySelector('.position-input');
+                    var supersetIdInput = childItem.querySelector('input[name$=".SupersetId"]');
+
+                    // Устанавливаем позицию внутри суперсета
+                    positionInput.value = i;
+                    supersetIdInput.value = supersetId;
+
+                    // Обновляем имена полей с правильным индексом
+                    positionInput.name = `WorkoutPositions[${index + i}].Position`;
+                    childItem.querySelector('input[name$=".Id"]').name = `WorkoutPositions[${index + i}].Id`;
+                    childItem.querySelector('input[name$=".IsSuperset"]').name = `WorkoutPositions[${index + i}].IsSuperset`;
+                    childItem.querySelector('input[name$=".SupersetId"]').name = `WorkoutPositions[${index + i}].SupersetId`;
+                });
+                return globalPosition + childItems.length; // Возвращаем обновленную глобальную позицию
+            }
+
+            // Отправка формы и логгирование перед отправкой
+            saveOrderForm.addEventListener('submit', function (event) {
+                event.preventDefault(); // Останавливаем отправку формы
+                updatePositions(); // Обновляем позиции перед отправкой
+
+                console.log("Form is being submitted with data:");
+                var formData = new FormData(saveOrderForm);
+
+                // Логгируем данные формы
+                for (var pair of formData.entries()) {
+                    console.log(pair[0] + ': ' + pair[1]);
+                }
+
+                // Отправка формы (раскомментируйте для отправки данных на сервер)
+                saveOrderForm.submit();
+            });
         });
     </script>
+
+
 }

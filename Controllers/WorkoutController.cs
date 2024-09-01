@@ -13,16 +13,29 @@ namespace SportWeb.Controllers
 {
     public class WorkoutController(
         ApplicationContext db,
+        IUserSessionService userSessionService,
         ILogger<WorkoutController> logger,
-        IUserService userService,
         IPaginationService paginationService,
         IWorkoutService workoutService) : Controller
     {
-        [Route("Profile/{id}/Workouts")]
+        [Route("profile/{id}/workouts")]
         public async Task<IActionResult> UserWorkouts(int id, int page = 1, int pageSize = 5, string? username = "???")
         {
-            var isUserWorkouts = userService.IsCurrentUser(id);
-            IQueryable<Workout> workouts = db.Workouts.Where(x => x.AuthorId == id || x.IsPublic);
+            var isUserWorkouts = userSessionService.IsCurrentUser(id);
+            IQueryable<Workout> workouts = db.Workouts;
+
+            string title;
+            if (isUserWorkouts)
+            {
+                title = "My workouts";
+                workouts = workouts.Where(x => x.AuthorId == id);
+            } else
+            {
+                title = $"{username}'s workouts";
+                workouts = workouts.Where(x => x.AuthorId == id && x.IsPublic);
+            }
+            ViewBag.Title = title;
+
             (var items, var model) = await paginationService.GetPaginatedResultAsync(workouts, page, pageSize);
             ViewBag.Id = id;
             ViewBag.Workouts = items;
@@ -40,7 +53,7 @@ namespace SportWeb.Controllers
             {
                 return NotFound();
             }
-            if (!workout.IsPublic && !userService.IsCurrentUser(workout.AuthorId))
+            if (!workout.IsPublic && !userSessionService.IsCurrentUser(workout.AuthorId))
             {
                 return Forbid();
             }
@@ -49,8 +62,16 @@ namespace SportWeb.Controllers
                 superset.WorkoutExercises = [.. superset.WorkoutExercises.OrderBy(we => we.Position)];
             }
             var workoutItems = workoutService.SortWorkoutItems([.. workout.WorkoutExercises], [.. workout.Supersets]);
-            ViewBag.WorkoutItems = workoutItems;
-            return View(workout);
+
+            WorkoutViewModel model = new()
+            {
+                Id = workout.Id,
+                IsPublic = workout.IsPublic,
+                Description = workout.Description,
+                WorkoutItems = workoutItems,
+                AuthorId = workout.AuthorId
+            };
+            return View(model);
         }
         
         [Authorize]
@@ -85,7 +106,7 @@ namespace SportWeb.Controllers
                 {
                     return NotFound();
                 }
-                if (!userService.IsCurrentUser(workout.AuthorId))
+                if (!userSessionService.IsCurrentUser(workout.AuthorId))
                 {
                     return Forbid();
                 }
@@ -124,7 +145,7 @@ namespace SportWeb.Controllers
             {
                 return NotFound();
             }
-            if (!userService.IsCurrentUser(workout.AuthorId))
+            if (!userSessionService.IsCurrentUser(workout.AuthorId))
             {
                 return Forbid();
             }
@@ -154,7 +175,7 @@ namespace SportWeb.Controllers
             {
                 return NotFound();
             }
-            if (!userService.IsCurrentUser(workout.AuthorId))
+            if (!userSessionService.IsCurrentUser(workout.AuthorId))
             {
                 return Forbid();
             }
@@ -183,7 +204,7 @@ namespace SportWeb.Controllers
             {
                 return NotFound();
             }
-            if (!userService.IsCurrentUser(workout.AuthorId))
+            if (!userSessionService.IsCurrentUser(workout.AuthorId))
             {
                 return Forbid();
             }
@@ -193,6 +214,7 @@ namespace SportWeb.Controllers
             var supersetToRemove = workout.Supersets.SingleOrDefault(x => x.Id == supersetId);
             if (supersetToRemove != null)
             {
+                db.RemoveRange(supersetToRemove.WorkoutExercises);
                 workout.Supersets.Remove(supersetToRemove);
                 await db.SaveChangesAsync();
                 logger.LogInformation("Superset removed from the workout successfully");
@@ -207,7 +229,7 @@ namespace SportWeb.Controllers
 
 
         //[Authorize]
-        [Route("Workout/Save/{workoutId}")]
+        [Route("workout/save/{workoutId}")]
         public async Task<IActionResult> Save(int workoutId)
         {
             logger.LogInformation("We are on the GET method");
@@ -217,7 +239,7 @@ namespace SportWeb.Controllers
             {
                 return NotFound();
             }
-            if (!userService.IsCurrentUser(workout.AuthorId))
+            if (!userSessionService.IsCurrentUser(workout.AuthorId))
             {
                 return Forbid();
             }
@@ -230,15 +252,19 @@ namespace SportWeb.Controllers
                 Id = workout.Id,
                 IsPublic = workout.IsPublic,
                 Description = workout.Description,
-                WorkoutItems = workoutItems
+                WorkoutItems = workoutItems,
+                AuthorId = workout.AuthorId
             };
             return View(model);
         }
 
         //[Authorize]
         [HttpPost]
-        public async Task<IActionResult> SaveOrder(int workoutId, List<WorkoutPositionsModel> workoutPositions)
+        public async Task<IActionResult> SaveOrder(int workoutId, List<WorkoutPositionsModel> workoutPositions, bool isPublic, string description)
         {
+            Log.VariableLog(logger, nameof(isPublic), isPublic);
+            Log.VariableLog(logger, nameof(description), description);
+            logger.LogInformation($"IsPublic is {isPublic}");
             logger.LogError("Saving order for workout with ID {WorkoutId}. Received {Count} workout positions.", workoutId, workoutPositions.Count);
             foreach (var position in workoutPositions)
             {
@@ -267,9 +293,12 @@ namespace SportWeb.Controllers
 
                     default:
                         workoutExercisesId[position.Id].Position = position.Position;
+                        workoutExercisesId[position.Id].SupersetId = null;
                         break;
                 }
             }
+            workout.IsPublic = isPublic;
+            workout.Description = description;
             if (db.ChangeTracker.HasChanges())
             {
                 await db.SaveChangesAsync();

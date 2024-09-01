@@ -4,10 +4,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Редактирование профиля</title>
+    <title>Editing profile</title>
 </head>
 <body>
-    <h1>Редактирование профиля</h1>
+    <h1>Edit profile</h1>
     <form asp-action="Edit" method="post" enctype="multipart/form-data">
         <div>
             <label asp-for="Name"></label>
@@ -15,27 +15,31 @@
             <span asp-validation-for="Name" class="text-danger"></span>
         </div>
         <div>
-            <label asp-for="FileUpload">Аватар:</label>
+            <label asp-for="FileUpload">Avatar:</label>
             <input asp-for="FileUpload" type="file" accept="image/*">
             <span asp-validation-for="FileUpload" class="text-danger"></span>
         </div>
         <div>
-            <label asp-for="Description">Описание:</label>
-            <textarea asp-for="Description" rows="4" placeholder="Напишите что-нибудь о себе...">@Model.Description</textarea>
+            <label asp-for="Description">Desription:</label>
+            <textarea asp-for="Description" rows="4" placeholder="Write something about you...">@Model.Description</textarea>
             <span asp-validation-for="Description" class="text-danger"></span>
         </div>
         <div>
-            <label asp-for="Password">Новый пароль:</label>
-            <input asp-for="Password" type="password" placeholder="Введите новый пароль">
+            <label asp-for="Password">New password:</label>
+            <input asp-for="Password" type="password" placeholder="Enter new password" autocomplete="new-password">
             <span asp-validation-for="Password" class="text-danger"></span>
         </div>
         <div>
-            <label asp-for="ConfirmPassword">Подтверждение пароля:</label>
-            <input asp-for="ConfirmPassword" type="password" placeholder="Подтвердите новый пароль">
+            <label asp-for="ConfirmPassword">Password confirmation:</label>
+            <input asp-for="ConfirmPassword" type="password" placeholder="Enter new password again" autocomplete="new-password">
             <span asp-validation-for="ConfirmPassword" class="text-danger"></span>
         </div>
         <div>
-            <button type="submit">Сохранить изменения</button>
+            <label asp-for="IsPublicFavourites">Favourite exercises are public</label>
+            <input asp-for="IsPublicFavourites" type="checkbox">
+        </div>
+        <div>
+            <button type="submit">Save changes</button>
         </div>
     </form>
     <form asp-action="Delete" asp-controller="Account" method="post">
