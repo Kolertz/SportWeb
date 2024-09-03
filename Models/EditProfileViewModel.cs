@@ -1,10 +1,9 @@
 ﻿using System.ComponentModel.DataAnnotations;
-using SportWeb.Attributes;
+
 namespace SportWeb.Models
 {
     public class EditProfileViewModel
     {
-        
         [Display(Name = "Name")]
         [DataType(DataType.Text)]
         public string? Name { get; set; }
@@ -19,6 +18,7 @@ namespace SportWeb.Models
         [Display(Name = "Confirm password")]
         [Compare("Password", ErrorMessage = "The password and confirmation password do not match.")]
         public string? ConfirmPassword { get; set; }
+
         public string? Avatar { get; set; }
         public IFormFile? FileUpload { get; set; }
         public string? Description { get; set; }

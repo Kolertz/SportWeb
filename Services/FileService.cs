@@ -1,12 +1,10 @@
-﻿using Microsoft.Extensions.Logging;
-using SportWeb.Models.Entities;
-
-namespace SportWeb.Services
+﻿namespace SportWeb.Services
 {
     public interface IFileService
     {
         Task UploadFile(IFormFile fileUpload, string filePath);
     }
+
     public class FileService(ILogger<FileService> logger) : IFileService
     {
         public async Task UploadFile(IFormFile fileUpload, string filePath)
@@ -31,6 +29,5 @@ namespace SportWeb.Services
                 logger.LogError($"Error {ex} when trying to upload file");
             }
         }
-
     }
 }

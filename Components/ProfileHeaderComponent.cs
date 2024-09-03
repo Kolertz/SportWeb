@@ -2,6 +2,7 @@
 using SportWeb.Models;
 using SportWeb.Models.Entities;
 using SportWeb.Services;
+
 namespace SportWeb.Components
 {
     public class ProfileHeaderComponent(IUserSessionService userSessionService, IUserRepository userRepository, ILogger<ProfileHeaderComponent> logger, IAvatarService avatarService) : ViewComponent
@@ -26,11 +27,12 @@ namespace SportWeb.Components
                     model.Avatar = avatar;
                     model.Id = id;
                 }
-            } else
+            }
+            else
             {
                 logger.LogInformation("User is not authenticated");
             }
-            
+
             return View("ProfileHeader", model);
         }
     }

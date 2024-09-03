@@ -4,12 +4,14 @@ using Microsoft.AspNetCore.Mvc.Routing;
 using Microsoft.AspNetCore.Mvc.ViewFeatures;
 using Microsoft.AspNetCore.Razor.TagHelpers;
 using SportWeb.Models;
+
 namespace SportWeb.TagHelpers
 {
     [HtmlTargetElement("pagination", Attributes = "pagination-model")]
     public class PaginationTagHelper : TagHelper
     {
         private IUrlHelperFactory _urlHelperFactory;
+
         public PaginationTagHelper(IUrlHelperFactory helperFactory)
         {
             _urlHelperFactory = helperFactory;

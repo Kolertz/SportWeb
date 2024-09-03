@@ -1,5 +1,4 @@
-﻿using Microsoft.Extensions.Logging;
-using SportWeb.Models.Entities;
+﻿using SportWeb.Models.Entities;
 using System.Text.RegularExpressions;
 
 namespace SportWeb.Services
@@ -7,9 +6,12 @@ namespace SportWeb.Services
     public interface IPictureService
     {
         string NewPictureName(Exercise exercise);
+
         string GetPicturePath(string pictureName);
+
         string GetPictureUrl(string pictureName);
     }
+
     public class PictureService(ILogger<PictureService> logger, IWebHostEnvironment env) : IPictureService
     {
         private readonly ILogger logger = logger;
@@ -34,18 +36,20 @@ namespace SportWeb.Services
 
             throw new FormatException("The picture URL format is incorrect.");
         }
+
         public string GetPictureUrl(string pictureName)
         {
             string fileUrl = $"/img/exercises/{pictureName}";
 
             return fileUrl;
         }
+
         public string GetPicturePath(string pictureName)
         {
             // Получаем путь до wwwroot
             string webRootPath = env.WebRootPath;
             // Строим полный путь до файла
-            string picturePath = Path.Combine(webRootPath, "img","exercises", pictureName);
+            string picturePath = Path.Combine(webRootPath, "img", "exercises", pictureName);
             if (!File.Exists(picturePath))
             {
                 picturePath = Path.Combine(webRootPath, "img", "exercises", "picture.png");

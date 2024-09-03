@@ -1,10 +1,7 @@
 ﻿using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.ChangeTracking;
 using SportWeb.Extensions;
-using SportWeb.Migrations;
 using SportWeb.Models;
 using SportWeb.Models.Entities;
 using SportWeb.Services;
@@ -29,7 +26,8 @@ namespace SportWeb.Controllers
             {
                 title = "My workouts";
                 workouts = workouts.Where(x => x.AuthorId == id);
-            } else
+            }
+            else
             {
                 title = $"{username}'s workouts";
                 workouts = workouts.Where(x => x.AuthorId == id && x.IsPublic);
@@ -73,7 +71,7 @@ namespace SportWeb.Controllers
             };
             return View(model);
         }
-        
+
         [Authorize]
         public IActionResult Create() => View();
 
@@ -86,8 +84,8 @@ namespace SportWeb.Controllers
                 return RedirectToAction("Index", "Home");
             }
             Workout workout = new()
-            { 
-                Name = name, 
+            {
+                Name = name,
                 AuthorId = int.Parse(User.Identity?.Name!),
                 IsPublic = true
             };
@@ -168,6 +166,7 @@ namespace SportWeb.Controllers
 
             return RedirectToAction(nameof(Save), new { id = workoutId });
         }
+
         public async Task<IActionResult> RemoveExercise(int workoutId, int exerciseId)
         {
             var workout = await workoutService.GetWorkoutAsync(workoutId);
@@ -227,7 +226,6 @@ namespace SportWeb.Controllers
             return RedirectToAction(nameof(Save), new { id = workoutId });
         }
 
-
         //[Authorize]
         [Route("workout/save/{workoutId}")]
         public async Task<IActionResult> Save(int workoutId)
@@ -247,7 +245,7 @@ namespace SportWeb.Controllers
 
             var workoutItems = workoutService.SortWorkoutItems([.. workout.WorkoutExercises], [.. workout.Supersets]);
 
-            WorkoutViewModel model = new ()
+            WorkoutViewModel model = new()
             {
                 Id = workout.Id,
                 IsPublic = workout.IsPublic,
@@ -303,13 +301,15 @@ namespace SportWeb.Controllers
             {
                 await db.SaveChangesAsync();
                 logger.LogInformation("Workout positions updated successfully");
-            } else
+            }
+            else
             {
                 logger.LogWarning("Workout positions were not updated");
             }
             HttpContext.Session.Remove("SelectedWorkout");
             return RedirectToAction(nameof(Save), new { id = workoutId });
         }
+
         /*
         if (model == null || !ModelState.IsValid)
         {
@@ -356,4 +356,3 @@ namespace SportWeb.Controllers
         */
     }
 }
-

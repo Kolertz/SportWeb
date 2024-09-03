@@ -8,16 +8,23 @@ namespace SportWeb.Services
     public interface IUserRepository
     {
         Task<User?> GetUserAsync<T>(T id, bool noTracking = false, string[]? includes = null);
+
         Task<User?> AddUserAsync(string? name, string email, string password);
+
         Task<bool> RemoveUserAsync<T>(T id);
+
         Task<bool> IsUserExistsByEmail(string email);
     }
+
     public interface IUserSessionService
     {
         Task<User?> GetUserFromSession(int id);
+
         bool IsCurrentUser(int? id);
+
         int? GetCurrentUserId();
     }
+
     public interface IUserRoleService
     {
         bool IsAdmin<T>(T id);
@@ -25,9 +32,8 @@ namespace SportWeb.Services
 
     public class UserService(ApplicationContext db, ILogger<UserService> logger, IPasswordCryptor passwordCryptor, IHttpContextAccessor httpContextAccessor) : IUserRepository, IUserSessionService, IUserRoleService
     {
-        public async Task<User?> GetUserAsync<T>(T id, bool noTracking = false, string[] ? includes = null)
+        public async Task<User?> GetUserAsync<T>(T id, bool noTracking = false, string[]? includes = null)
         {
-
             try
             {
                 if (id == null)
@@ -70,6 +76,7 @@ namespace SportWeb.Services
                 return null;
             }
         }
+
         public async Task<User?> GetUserFromSession(int id)
         {
             var context = httpContextAccessor.HttpContext;
@@ -115,7 +122,7 @@ namespace SportWeb.Services
         {
             try
             {
-                User newUser = new() { Name = name, Email = email, Password = passwordCryptor.Hash(password)};
+                User newUser = new() { Name = name, Email = email, Password = passwordCryptor.Hash(password) };
                 await db.Users.AddAsync(newUser);
                 await db.SaveChangesAsync();
 
@@ -156,6 +163,7 @@ namespace SportWeb.Services
                 return false;
             }
         }
+
         public bool IsAdmin<T>(T id)
         {
             int intId = CastToInt(id);
@@ -165,10 +173,12 @@ namespace SportWeb.Services
             }
             return false;
         }
+
         public async Task<bool> IsUserExistsByEmail(string email)
         {
             return await db.Users.AnyAsync(u => u.Email == email);
         }
+
         public int CastToInt<T>(T id)
         {
             int intId = 0;
@@ -182,6 +192,7 @@ namespace SportWeb.Services
             }
             return intId;
         }
+
         public int? GetCurrentUserId()
         {
             var context = httpContextAccessor.HttpContext;
@@ -193,4 +204,3 @@ namespace SportWeb.Services
         }
     }
 }
-

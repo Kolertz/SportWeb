@@ -1,5 +1,4 @@
 ﻿using Microsoft.EntityFrameworkCore;
-using SportWeb.Models.Entities;
 using SportWeb.Models;
 
 namespace SportWeb.Services
@@ -8,6 +7,7 @@ namespace SportWeb.Services
     {
         Task<(List<T> items, PaginationModel)> GetPaginatedResultAsync<T>(IQueryable<T> query, int page, int pageSize);
     }
+
     public class PaginationService : IPaginationService
     {
         public async Task<(List<T> items, PaginationModel)> GetPaginatedResultAsync<T>(IQueryable<T> query, int page, int pageSize)

@@ -2,6 +2,7 @@
 
 <!-- Основная форма для сохранения порядка -->
 <form id="saveOrderForm" asp-action="SaveOrder" asp-controller="Workout" method="post">
+    @Html.AntiForgeryToken()
     <input type="hidden" name="workoutId" value="@Model.Id"/>
     <input type="checkbox" name="isPublic" value="true" form="saveOrderForm" @(Model.IsPublic ? "checked" : "")> Is Public?
     <br />
@@ -75,6 +76,7 @@
 @foreach (var item in Model.WorkoutItems.OfType<WorkoutExercise>())
 {
     <form id="removeExerciseForm-@item.ExerciseId" asp-action="RemoveExercise" asp-controller="Workout" method="post" style="display:none;">
+        @Html.AntiForgeryToken()
         <input type="hidden" name="workoutId" value="@Model.Id" />
         <input type="hidden" name="exerciseId" value="@item.ExerciseId" />
     </form>
@@ -84,6 +86,7 @@
 @foreach (var superset in Model.WorkoutItems.OfType<Superset>())
 {
     <form id="removeSupersetForm-@superset.Id" asp-action="RemoveSuperset" asp-controller="Workout" method="post" style="display:none;">
+        @Html.AntiForgeryToken()
         <input type="hidden" name="workoutId" value="@Model.Id" />
         <input type="hidden" name="supersetId" value="@superset.Id" />
     </form>
@@ -91,11 +94,13 @@
 
 <br />
 <form asp-action="Index" asp-controller="Exercises">
+    @Html.AntiForgeryToken()
     <input type="hidden" name="workoutId" value="@Model.Id" />
     <button type="submit" class="btn btn-primary">Add Exercise</button>
 </form>
 
 <form asp-action="AddSuperset" asp-controller="Workout" method="post" style="display:inline;">
+    @Html.AntiForgeryToken()
     <input type="hidden" name="workoutId" value="@Model.Id" />
     <button type="submit" class="btn btn-primary">Add Superset</button>
 </form>

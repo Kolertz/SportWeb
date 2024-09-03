@@ -21,6 +21,7 @@ else
         @if (workout != null)
         {
             <form asp-controller="Workout" asp-action="Save" asp-route-exerciseId="@exercise.Id" asp-route-workoutId="@workout.Id">
+                @Html.AntiForgeryToken()
                 <input type="submit" value="Add Exercise" />
             </form>
         }

@@ -9,6 +9,7 @@
 <body>
     <h1>Edit profile</h1>
     <form asp-action="Edit" method="post" enctype="multipart/form-data">
+        @Html.AntiForgeryToken()
         <div>
             <label asp-for="Name"></label>
             <input asp-for="Name" type="text" value="@Model.Name">
@@ -43,6 +44,7 @@
         </div>
     </form>
     <form asp-action="Delete" asp-controller="Account" method="post">
+        @Html.AntiForgeryToken()
         <button type="submit" class="btn btn-danger">Delete</button>
         <input type="hidden" name="__RequestVerificationToken" value="@Html.AntiForgeryToken()"/>
     </form>

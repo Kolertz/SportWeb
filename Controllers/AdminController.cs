@@ -15,6 +15,7 @@ namespace SportWeb.Controllers
         IPaginationService paginationService) : Controller
     {
         public IActionResult Index() => View();
+
         public async Task<IActionResult> PendingExercises(int page = 1, int pageSize = 5)
         {
             IQueryable<Exercise> exercises = db.Exercises.Where(x => x.State == ExerciseState.Pending).Include(u => u.User).OrderBy(x => x.Id);
@@ -30,6 +31,7 @@ namespace SportWeb.Controllers
             ViewBag.Exercises = result;
             return View(model);
         }
+
         public async Task<IActionResult> RejectedExercises(int page = 1, int pageSize = 5)
         {
             IQueryable<Exercise> exercises = db.Exercises.Where(x => x.State == ExerciseState.Rejected).Include(u => u.User).OrderBy(x => x.Id);
@@ -45,11 +47,12 @@ namespace SportWeb.Controllers
             ViewBag.Exercises = result;
             return View(model);
         }
+
         public async Task<IActionResult> Approve(int id)
         {
             var exercise = await exerciseService.GetExerciseAsync(id);
-            if (exercise == null) 
-            { 
+            if (exercise == null)
+            {
                 TempData["Message"] = "Exercise not found!";
                 logger.LogWarning("Exercise not found!");
                 return RedirectToAction(nameof(PendingExercises));

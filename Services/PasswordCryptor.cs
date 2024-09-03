@@ -3,8 +3,10 @@
     public interface IPasswordCryptor
     {
         string Hash(string password);
+
         bool Verify(string password, string hashedPassword);
     }
+
     public class PasswordCryptor : IPasswordCryptor
     {
         // Метод для хеширования пароля

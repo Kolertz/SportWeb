@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
 using SportWeb.Extensions;
+using SportWeb.Filters;
 using SportWeb.Models;
 using SportWeb.Models.Entities;
 using SportWeb.Services;
@@ -20,7 +21,7 @@ namespace SportWeb.Controllers
         IPaginationService paginationService,
         IAuthorizationService authorizationService) : Controller
     {
-        public async Task<IActionResult> Index( int? muscle, int? movement, int? tag, int? equipment, string? name, int page = 1, int pageSize = 5)
+        public async Task<IActionResult> Index(int? muscle, int? movement, int? tag, int? equipment, string? name, int page = 1, int pageSize = 5)
         {
             IQueryable<Exercise> exercises = db.Exercises.Where(x => x.State == ExerciseState.Approved).Include(u => u.User).Include(c => c.Categories).Include(u => u.UsersWhoFavourited).OrderBy(x => x.Name);
 
@@ -84,6 +85,7 @@ namespace SportWeb.Controllers
             };
             return View(model);
         }
+
         public async Task<IActionResult> Details(int id)
         {
             var exercise = await db.Exercises.Include(x => x.User).Include(x => x.Categories).Include(x => x.UsersWhoFavourited).FirstOrDefaultAsync(x => x.Id == id);
@@ -115,7 +117,7 @@ namespace SportWeb.Controllers
         {
             var categories = await db.Categories.ToListAsync();
             var emptyExercise = new Exercise { Description = "", Name = "" };
-            var model = new EditExerciseViewModel {  Categories = categories, Exercise = emptyExercise };
+            var model = new EditExerciseViewModel { Categories = categories, Exercise = emptyExercise };
             return View(model);
         }
 
@@ -145,8 +147,8 @@ namespace SportWeb.Controllers
                 return View(model);
             }
 
-        var isAdmin = (await authorizationService.AuthorizeAsync(User, "AdminOnly")).Succeeded;
-            
+            var isAdmin = (await authorizationService.AuthorizeAsync(User, "AdminOnly")).Succeeded;
+
             if (!isAdmin)
             {
                 exercise.State = ExerciseState.Pending;
@@ -196,21 +198,17 @@ namespace SportWeb.Controllers
 
         [HttpPost]
         [Authorize]
+        [ValidateModelStateFilter]
         public async Task<IActionResult> Edit(EditExerciseViewModel model)
         {
             var exercise = model.Exercise;
-            if (!ModelState.IsValid || exercise == null)
-            {
-                logger.LogWarning("Something went wrong!");
-                TempData["Message"] = "Something went wrong!";
-                return View(model);
-            }
             var isAdmin = (await authorizationService.AuthorizeAsync(User, "AdminOnly")).Succeeded;
             if (!isAdmin)
             {
                 exercise.State = ExerciseState.Pending;
                 logger.LogInformation("Exercise state changed to pending");
-            } else
+            }
+            else
             {
                 exercise.State = ExerciseState.Approved;
                 logger.LogInformation("Exercise state changed to approved");
@@ -248,7 +246,7 @@ namespace SportWeb.Controllers
             }
 
             var user = await userRepository.GetUserAsync(id);
-            
+
             (var items, var model) = await paginationService.GetPaginatedResultAsync(exercises, page, pageSize);
 
             if (user == null || items == null || items.Count == 0)
@@ -260,13 +258,11 @@ namespace SportWeb.Controllers
                 return Forbid();
             }
 
-            
-
             ViewBag.Title = title;
             ViewBag.Id = id;
             ViewBag.Exercises = items;
             ViewBag.Workout = HttpContext.Session.Get<Workout>("SelectedWorkout");
-            
+
             return View(model);
         }
 
@@ -334,6 +330,7 @@ namespace SportWeb.Controllers
             }
             return RedirectToAction(nameof(Details), new { id = exerciseId });
         }
+
         public async Task<IActionResult> RemoveFromFavourites(int exerciseId, string? returnUrl)
         {
             //var exercise = await exerciseService.GetExerciseAsync(exerciseId, false, ["UsersWhoFavourited"]);
@@ -354,7 +351,8 @@ namespace SportWeb.Controllers
                 await db.SaveChangesAsync();
                 TempData["Message"] = "Exercise removed from Favourites successfully :(";
                 logger.LogInformation("Exercise removed from Favourites successfully");
-            } else
+            }
+            else
             {
                 logger.LogError($"Change tracker has no changes, User id is {user.Id}, exercise id is {exercise.Id}");
             }

@@ -1,6 +1,5 @@
 ﻿using SportWeb.Models.Entities;
 using System.ComponentModel.DataAnnotations;
-using System.Diagnostics.Eventing.Reader;
 
 namespace SportWeb.Attributes
 {

@@ -1,7 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using SportWeb.Models.Entities;
-using Microsoft.AspNetCore.Hosting;
 
 namespace SportWeb.Models
 {
@@ -22,7 +21,7 @@ namespace SportWeb.Models
 
             modelBuilder.Entity<User>().HasMany(x => x.FavouriteExercises).WithMany(x => x.UsersWhoFavourited).UsingEntity(e => e.ToTable("FavouriteExercises"));
             modelBuilder.Entity<User>().HasAlternateKey(x => x.Email);
-            
+
             modelBuilder.Entity<Workout>().HasOne(x => x.User).WithMany(x => x.Workouts).HasForeignKey(x => x.AuthorId).OnDelete(DeleteBehavior.SetNull);
             modelBuilder.Entity<Workout>().HasMany(x => x.Supersets).WithOne(x => x.Workout).HasForeignKey(x => x.WorkoutId).OnDelete(DeleteBehavior.Cascade);
             modelBuilder.Entity<Workout>().HasIndex(x => x.AuthorId);
@@ -33,7 +32,6 @@ namespace SportWeb.Models
             modelBuilder.Entity<WorkoutExercise>().HasOne(we => we.Exercise).WithMany(e => e.WorkoutExercises).HasForeignKey(we => we.ExerciseId).OnDelete(DeleteBehavior.Cascade);
             modelBuilder.Entity<WorkoutExercise>().HasOne(we => we.Superset).WithMany(s => s.WorkoutExercises).HasForeignKey(s => s.SupersetId).OnDelete(DeleteBehavior.NoAction);
 
-            
             base.OnModelCreating(modelBuilder);
         }
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)

@@ -1,6 +1,4 @@
-﻿using Microsoft.AspNetCore.Http;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging;
+﻿using Microsoft.EntityFrameworkCore;
 using SportWeb.Models;
 using SportWeb.Models.Entities;
 
@@ -10,6 +8,7 @@ namespace SportWeb.Services
     {
         Task<Exercise?> GetExerciseAsync(int id, bool noTracking = false, string[]? includes = null);
     }
+
     public class ExerciseService(ApplicationContext db, ILogger<ExerciseService> logger) : IExerciseService
     {
         public async Task<Exercise?> GetExerciseAsync(int id, bool noTracking = false, string[]? includes = null)

@@ -9,6 +9,5 @@ namespace SportWeb.Extensions
         {
             return query.Include(navigationPropertyPath);
         }
-
     }
 }

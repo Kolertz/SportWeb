@@ -1,18 +1,18 @@
 ﻿using Microsoft.EntityFrameworkCore;
-using SportWeb.Extensions;
-using SportWeb.Migrations;
 using SportWeb.Models;
 using SportWeb.Models.Entities;
-using System.Linq;
 
 namespace SportWeb.Services
 {
     public interface IWorkoutService
     {
         List<object> SortWorkoutItems(List<WorkoutExercise> exercises, List<Superset> supersets);
+
         Task<Workout?> GetWorkoutAsync(int id, bool noTracking = false);
+
         Task UpdateWorkoutPositions(ICollection<object> workoutItems, int workoutId);
     }
+
     public class WorkoutService(IHttpContextAccessor httpContextAccessor, ApplicationContext db, ILogger<WorkoutService> logger) : IWorkoutService
     {
         public async Task<Workout?> GetWorkoutAsync(int id, bool noTracking = false)
@@ -27,7 +27,7 @@ namespace SportWeb.Services
                 if (workout != null && workout.Id == id)
                 {
                     logger.LogInformation("Session's workout is correct");
-                    return workout; 
+                    return workout;
                 }
             }
             */
@@ -44,6 +44,7 @@ namespace SportWeb.Services
 
             return await query.FirstOrDefaultAsync(w => w.Id == id);
         }
+
         public List<object> SortWorkoutItems(List<WorkoutExercise> exercises, List<Superset> supersets)
         {
             foreach (var superset in supersets)
@@ -103,6 +104,7 @@ namespace SportWeb.Services
                 logger.LogInformation("No changes were made to the order.");
             }
         }
+
         private int GetPosition(object item)
         {
             return item switch

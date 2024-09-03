@@ -1,5 +1,6 @@
 ﻿@model EditExerciseViewModel
 <form asp-action="@ViewBag.Action" method="post" enctype="multipart/form-data">
+    @Html.AntiForgeryToken()
     <div class="form-group">
         <label asp-for="Exercise.Name"></label>
         <input type="text" asp-for="Exercise.Name" class="form-control" />

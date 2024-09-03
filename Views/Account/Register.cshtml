@@ -8,6 +8,7 @@
     <body>
         <h2>Register</h2>
         <form asp-controller="Account" asp-action="Register" asp-antiforgery="true">
+        @Html.AntiForgeryToken()
             <p>
                 <label asp-for="Name"></label>
                 <input type='text' asp-for="Name" />

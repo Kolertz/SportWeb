@@ -1,17 +1,16 @@
-﻿using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Mvc;
-using SportWeb.Models;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.AspNetCore.Authorization;
+﻿using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
-using System.Security.Claims;
-using Microsoft.AspNetCore.Authentication;
-using Microsoft.AspNetCore.Mvc.ModelBinding;
-using System.Text.RegularExpressions;
-using SportWeb.Services;
-using Microsoft.Extensions.Logging;
-using SportWeb.Models.Entities;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 using SportWeb.Extensions;
+using SportWeb.Filters;
+using SportWeb.Models;
+using SportWeb.Models.Entities;
+using SportWeb.Services;
+using System.Security.Claims;
 
 namespace SportWeb.Controllers
 {
@@ -22,15 +21,34 @@ namespace SportWeb.Controllers
         ILogger<AccountController> logger,
         IPasswordCryptor passwordCryptor,
         IAvatarService avatarService,
-        IFileService fileService) : Controller
+        IFileService fileService,
+        IReCaptchaService reCaptchaService,
+        IOptions<GoogleReCaptchaSettings> reCaptchaSettings) : Controller
     {
         [HttpGet]
-        public ActionResult Login() => View();
+        public ActionResult Login()
+        {
+            var model = new LoginViewModel
+            {
+                SiteKey = reCaptchaSettings.Value.SiteKey // Можно также получить ключ из конфигурации
+            };
+
+            return View(model);
+        }
 
         [HttpPost]
-        public async Task<ActionResult> Login(User form, string? returnUrl)
+        [EnableRateLimiting("LoginRateLimit")]
+        [ValidateModelStateFilter]
+        public async Task<ActionResult> Login(LoginViewModel form, string? returnUrl)
         {
             var context = Request.HttpContext;
+
+            var isCaptchaValid = await reCaptchaService.IsCaptchaValid(form.ReCaptchaToken!);
+            if (!isCaptchaValid)
+            {
+                TempData["Message"] = ($"Captcha validation failed., ReCaptchaToken: {form.ReCaptchaToken}");
+                return View(form);
+            }
             User? user = db.Users.FirstOrDefault(u => u.Email == form.Email);
             if (user == null)
             {
@@ -62,25 +80,18 @@ namespace SportWeb.Controllers
         public ActionResult Register() => View();
 
         [HttpPost]
-        [ValidateAntiForgeryToken]
+        [ValidateModelStateFilter]
         public ActionResult Register(RegisterViewModel form)
         {
-            if (ModelState.IsValid)
+            if (userRepository.IsUserExistsByEmail(form.Email).Result)
             {
-                if (userRepository.IsUserExistsByEmail(form.Email).Result)
-                {
-                    TempData["Message"] = "User with such email already exists.";
-                    return RedirectToAction(nameof(Register));
-                }
-                userRepository.AddUserAsync(form.Name, form.Email, form.Password);
+                TempData["Message"] = "User with such email already exists.";
+                return RedirectToAction(nameof(Register));
+            }
+            userRepository.AddUserAsync(form.Name, form.Email, form.Password);
 
-                TempData["Message"] = "Registered successfully!";
-                return Redirect("/");
-            }
-            else
-            {
-                return View(form);
-            }
+            TempData["Message"] = "Registered successfully!";
+            return Redirect("/");
         }
         public async Task<ActionResult> Logout()
         {
@@ -111,9 +122,6 @@ namespace SportWeb.Controllers
             var addedWorkoutsQuery = db.Workouts.Where(x => x.AuthorId == user.Id && x.IsPublic);
             var addedWorkoutsCount = await addedWorkoutsQuery.CountAsync();  // Считаем общее количество
             var addedWorkouts = await addedWorkoutsQuery.Take(4).ToListAsync();
-
-            
-            
 
             var model = new ProfileViewModel
             {
@@ -166,13 +174,9 @@ namespace SportWeb.Controllers
         [HttpPost]
         [Authorize]
         [Route("profile/edit")]
+        [ValidateModelStateFilter]
         public async Task<IActionResult> Edit(EditProfileViewModel model)
         {
-            if (!ModelState.IsValid)
-            {
-                logger.LogWarning("Model state is invalid.");
-                return View(model); // Вернуться на ту же страницу в случае ошибки
-            }
             var id = userSessionService.GetCurrentUserId();
             User? user = await userRepository.GetUserAsync(id, false);
             if (user == null)
@@ -206,13 +210,14 @@ namespace SportWeb.Controllers
                     return View(model);
                 }
             }
-            
+
             if (db.ChangeTracker.HasChanges())
             {
                 await db.SaveChangesAsync();
                 logger.LogInformation("Changes were made to the database");
                 HttpContext.Session.Set("User", user);
-            } else
+            }
+            else
             {
                 logger.LogInformation("No changes were made to the database");
             }
@@ -222,7 +227,6 @@ namespace SportWeb.Controllers
 
         [HttpPost]
         [Authorize]
-        [ValidateAntiForgeryToken]
         public async Task<IActionResult> Delete()
         {
             var userId = userSessionService.GetCurrentUserId();
@@ -239,4 +243,3 @@ namespace SportWeb.Controllers
         }
     }
 }
-

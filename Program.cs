@@ -1,20 +1,25 @@
 using Microsoft.AspNetCore.Authentication.Cookies;
-using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.ApplicationModels;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.AspNetCore.ResponseCompression;
+using Microsoft.AspNetCore.Rewrite;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
+using SportWeb.Filters;
+using SportWeb.Middlewares;
 using SportWeb.Models;
 using SportWeb.Services;
-using SportWeb.Filters;
-using Microsoft.AspNetCore.Rewrite;
 using System.Text.Json.Serialization;
-using SportWeb.Middlewares;
-using Microsoft.AspNetCore.Mvc.ApplicationModels;
+using System.Threading.RateLimiting;
+
 var builder = WebApplication.CreateBuilder(args);
-// Add services to the container.  
+// Add services to the container.
 builder.Services.AddControllersWithViews(options =>
 {
     options.Filters.Add<MessageFilter>();
     options.Conventions.Add(new RouteTokenTransformerConvention(new KebabCaseParameterTransformer()));
+    options.Filters.Add(new AutoValidateAntiforgeryTokenAttribute());
 })
 .AddJsonOptions(options =>
  {
@@ -80,7 +85,6 @@ builder.Services.AddTransient<IPasswordCryptor, PasswordCryptor>();
 builder.Services.AddTransient<IFileService, FileService>();
 builder.Services.AddTransient<IPictureService, PictureService>();
 builder.Services.AddTransient<IPaginationService, PaginationService>();
-//builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IUserRepository, UserService>();
 builder.Services.AddScoped<IUserRoleService, UserService>();
 builder.Services.AddScoped<IUserSessionService, UserService>();
@@ -88,8 +92,37 @@ builder.Services.AddScoped<IWorkoutService, WorkoutService>();
 builder.Services.AddScoped<IExerciseService, ExerciseService>();
 builder.Services.AddSingleton<IOutboundParameterTransformer, KebabCaseParameterTransformer>();
 
+builder.Services.AddRateLimiter(options =>
+{
+    options.AddTokenBucketLimiter("LoginRateLimit", tokenOptions =>
+    {
+        tokenOptions.TokenLimit = 10; // Максимум 10 токенов
+        tokenOptions.ReplenishmentPeriod = TimeSpan.FromMinutes(1); // Период пополнения токенов
+        tokenOptions.TokensPerPeriod = 1; // Добавление 1 токена за период
+        tokenOptions.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
+        tokenOptions.QueueLimit = 2; // Очередь до 2 запросов
+    });
+    options.OnRejected = async (context, cancellationToken) =>
+    {
+        context.HttpContext.Response.StatusCode = StatusCodes.Status429TooManyRequests;
+        await context.HttpContext.Response.WriteAsync("Слишком много запросов. Пожалуйста, попробуйте позже.", cancellationToken);
+    };
+});
+
+// Добавляем настройки reCAPTCHA
+builder.Services.Configure<GoogleReCaptchaSettings>(builder.Configuration.GetSection("GoogleReCaptcha"));
+
+// Добавляем HttpClient для использования в сервисе проверки reCAPTCHA
+builder.Services.AddHttpClient();
+
+// Добавляем сервис для проверки reCAPTCHA
+builder.Services.AddTransient<IReCaptchaService, ReCaptchaService>();
+
+builder.Services.AddOutputCache();
 
 var app = builder.Build();
+
+app.UseOutputCache();
 
 app.UseMiddleware<RequestLoggingMiddleware>();
 // Исключение сжатия для малых ответов
@@ -97,16 +130,23 @@ app.Use(async (context, next) =>
 {
     await next();
 
-    
     var contentLength = context.Response.ContentLength;
     if (contentLength.HasValue && contentLength.Value < 1024)
     {
         context.Response.Headers.Remove("Content-Encoding");
         app.Logger.LogInformation("Response wasn't compressed");
-    } else
+    }
+    else
     {
         app.Logger.LogInformation("Response was compressed");
     }
+});
+
+//Защита от Clickjacking
+app.Use(async (context, next) =>
+{
+    context.Response.Headers.Append("X-Frame-Options", "DENY");
+    await next();
 });
 
 if (!app.Environment.IsDevelopment())
@@ -114,7 +154,8 @@ if (!app.Environment.IsDevelopment())
     // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
     app.UseHsts();
     app.UseExceptionHandler("/Home/Error");
-} else
+}
+else
 {
     app.UseDeveloperExceptionPage();
 }

@@ -3,7 +3,6 @@ using Microsoft.AspNetCore.Mvc.Filters;
 
 namespace SportWeb.Filters
 {
-
     public class MessageFilter : IActionFilter
     {
         public void OnActionExecuting(ActionExecutingContext context)

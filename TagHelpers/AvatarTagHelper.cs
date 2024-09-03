@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Razor.TagHelpers;
+
 namespace SportWeb.TagHelpers
 {
     [HtmlTargetElement("avatar-image", Attributes = "user-id")]
@@ -10,6 +11,7 @@ namespace SportWeb.TagHelpers
         {
             _httpContextAccessor = httpContextAccessor;
         }
+
         //[HtmlAttributeName("user-id")]
         public override void Process(TagHelperContext context, TagHelperOutput output)
         {

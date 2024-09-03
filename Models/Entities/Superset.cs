@@ -9,6 +9,7 @@ namespace SportWeb.Models.Entities
 
         [JsonIgnore]
         public Workout Workout { get; set; } = null!;
+
         public ICollection<WorkoutExercise> WorkoutExercises { get; set; } = [];
         public int Position { get; set; }
     }

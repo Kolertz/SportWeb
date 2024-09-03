@@ -14,7 +14,7 @@ namespace SportWeb.Models.Entities
         [JsonIgnore]
         public Exercise Exercise { get; set; } = null!;
 
-        public int Position { get; set; }  
+        public int Position { get; set; }
         public int? SupersetId { get; set; }
 
         [JsonIgnore]
