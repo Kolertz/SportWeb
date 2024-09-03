@@ -202,6 +202,10 @@ namespace SportWeb.Controllers
         public async Task<IActionResult> Edit(EditExerciseViewModel model)
         {
             var exercise = model.Exercise;
+            if (exercise == null)
+            {
+                return NotFound();
+            }
             var isAdmin = (await authorizationService.AuthorizeAsync(User, "AdminOnly")).Succeeded;
             if (!isAdmin)
             {

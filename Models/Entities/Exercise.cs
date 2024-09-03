@@ -8,13 +8,13 @@ namespace SportWeb.Models.Entities
         public int Id { get; set; }
 
         [Required(ErrorMessage = "Exercise Title is required")]
-        public string? Name { get; set; }
+        public string Name { get; set; } = "Title";
 
         public string PictureUrl { get; set; } = "picture.png";
 
         [Required(ErrorMessage = "Description is required")]
         [Length(100, 10000, ErrorMessage = "The {0} must be at least {1} characters long.")]
-        public string? Description { get; set; }
+        public required string Description { get; set; }
 
         public ExerciseState State { get; set; } = ExerciseState.Pending;
         public List<Category>? Categories { get; set; }
