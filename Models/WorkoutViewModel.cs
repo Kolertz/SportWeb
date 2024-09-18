@@ -4,7 +4,7 @@
     {
         public int Id { get; set; }
 
-        //[EnsureOneExercise]
+        public string? Name { get; set; }
         public ICollection<object> WorkoutItems { get; set; } = [];
 
         public bool IsPublic { get; set; }

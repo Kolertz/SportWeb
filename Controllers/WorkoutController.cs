@@ -9,29 +9,20 @@ using SportWeb.Services;
 namespace SportWeb.Controllers
 {
     public class WorkoutController(
-        ApplicationContext db,
-        IUserSessionService userSessionService,
+        IUserCacheService userCacheService,
         ILogger<WorkoutController> logger,
         IPaginationService paginationService,
-        IWorkoutService workoutService) : Controller
+        IExerciseService exerciseService,
+        IWorkoutRepository workoutRepository,
+        IWorkoutEditorService workoutEditorService,
+        IUserRepository userRepository) : Controller
     {
         [Route("profile/{id}/workouts")]
-        public async Task<IActionResult> UserWorkouts(int id, int page = 1, int pageSize = 5, string? username = "???")
+        public async Task<IActionResult> UserWorkouts(int id, int page = 1, int pageSize = 5)
         {
-            var isUserWorkouts = userSessionService.IsCurrentUser(id);
-            IQueryable<Workout> workouts = db.Workouts;
-
-            string title;
-            if (isUserWorkouts)
-            {
-                title = "My workouts";
-                workouts = workouts.Where(x => x.AuthorId == id);
-            }
-            else
-            {
-                title = $"{username}'s workouts";
-                workouts = workouts.Where(x => x.AuthorId == id && x.IsPublic);
-            }
+            var isUserWorkouts = userCacheService.IsCurrentUser(id);
+            var username = await userRepository.GetUserNameAsync(id);
+            (var title, var workouts) = workoutRepository.GetUserWorkouts(id, username, isUserWorkouts);
             ViewBag.Title = title;
 
             (var items, var model) = await paginationService.GetPaginatedResultAsync(workouts, page, pageSize);
@@ -45,13 +36,12 @@ namespace SportWeb.Controllers
         [HttpGet]
         public async Task<IActionResult> Details(int id)
         {
-            var workout = await workoutService.GetWorkoutAsync(id);
-
+            var workout = await workoutRepository.GetWorkoutAsync(id, false, ["Supersets", "WorkoutExercises.Exercise.User"]);
             if (workout == null)
             {
                 return NotFound();
             }
-            if (!workout.IsPublic && !userSessionService.IsCurrentUser(workout.AuthorId))
+            if (!workout.IsPublic && !userCacheService.IsCurrentUser(workout.AuthorId))
             {
                 return Forbid();
             }
@@ -59,7 +49,7 @@ namespace SportWeb.Controllers
             {
                 superset.WorkoutExercises = [.. superset.WorkoutExercises.OrderBy(we => we.Position)];
             }
-            var workoutItems = workoutService.SortWorkoutItems([.. workout.WorkoutExercises], [.. workout.Supersets]);
+            var workoutItems = workoutEditorService.SortWorkoutItems([.. workout.WorkoutExercises], [.. workout.Supersets]);
 
             WorkoutViewModel model = new()
             {
@@ -79,56 +69,35 @@ namespace SportWeb.Controllers
         [HttpPost]
         public async Task<IActionResult> Create(string name)
         {
-            if (!User.Identity!.IsAuthenticated)
+            var user = User.Identity!;
+            if (!user.IsAuthenticated)
             {
                 return RedirectToAction("Index", "Home");
             }
-            Workout workout = new()
-            {
-                Name = name,
-                AuthorId = int.Parse(User.Identity?.Name!),
-                IsPublic = true
-            };
-            await db.Workouts.AddAsync(workout);
-            await db.SaveChangesAsync();
+            var authorId = int.Parse(user.Name!);
+            var workout = await workoutEditorService.AddWorkoutAsync(name, authorId);
+
             return RedirectToAction(nameof(Save), new { workout, workout.Id });
         }
 
         [HttpPost]
         public async Task<IActionResult> AddExercise(int workoutId, int? exerciseId)
         {
-            if (exerciseId != null)
+            if (exerciseId is not null)
             {
-                var workout = await workoutService.GetWorkoutAsync(workoutId);
+                var workout = await workoutRepository.GetWorkoutAsync(workoutId);
                 if (workout == null)
                 {
                     return NotFound();
                 }
-                if (!userSessionService.IsCurrentUser(workout.AuthorId))
+                if (!userCacheService.IsCurrentUser(workout.AuthorId))
                 {
                     return Forbid();
                 }
                 logger.LogInformation("Trying to add exercise to a workout...");
-                var exercise = await db.Exercises.AsNoTracking().FirstOrDefaultAsync(x => x.Id == exerciseId);
-                var exerciseExists = await db.WorkoutExercises.AnyAsync(x => x.ExerciseId == exerciseId && x.WorkoutId == workoutId); // check if exercise exists
-                var exerciseCount = workout.WorkoutExercises == null ? 0 : workout.WorkoutExercises.Count + workout.Supersets.Count;
-
-                if (exercise != null && exercise.State == ExerciseState.Approved && !exerciseExists)
-                {
-                    var workoutExercise = new WorkoutExercise
-                    {
-                        WorkoutId = workout.Id,
-                        ExerciseId = exercise.Id,
-                        Position = exerciseCount
-                    };
-                    workout.WorkoutExercises?.Add(workoutExercise);
-                    await db.SaveChangesAsync();
-                    logger.LogInformation("Exercise added to a workout successfully");
-                }
-                else
-                {
-                    logger.LogWarning("Exercise not found or not approved");
-                }
+                //var exercise = await db.Exercises.AsNoTracking().FirstOrDefaultAsync(x => x.Id == exerciseId);
+                var exercise = await exerciseService.GetExerciseAsync(exerciseId.Value);
+                await workoutEditorService.AddExerciseAsync(workout, exercise!);
             }
 
             return RedirectToAction(nameof(Save), new { workoutId });
@@ -138,90 +107,52 @@ namespace SportWeb.Controllers
         public async Task<IActionResult> AddSuperset(int workoutId)
         {
             // Получаем тренировку по workoutId
-            var workout = await workoutService.GetWorkoutAsync(workoutId);
+            var workout = await workoutRepository.GetWorkoutAsync(workoutId);
             if (workout == null)
             {
                 return NotFound();
             }
-            if (!userSessionService.IsCurrentUser(workout.AuthorId))
+            if (!userCacheService.IsCurrentUser(workout.AuthorId))
             {
                 return Forbid();
             }
 
             logger.LogInformation("Trying to add a superset to a workout...");
-            var exerciseCount = workout.WorkoutExercises == null ? 0 : workout.WorkoutExercises.Count + workout.Supersets.Count;
-
-            var newSuperset = new Superset
-            {
-                WorkoutId = workoutId,
-                Position = exerciseCount
-            };
-
-            workout.Supersets ??= [];
-            workout.Supersets.Add(newSuperset);
-
-            await db.SaveChangesAsync();
-
-            logger.LogInformation("Superset added to the workout successfully");
+            await workoutEditorService.AddSupersetAsync(workout);
 
             return RedirectToAction(nameof(Save), new { id = workoutId });
         }
 
         public async Task<IActionResult> RemoveExercise(int workoutId, int exerciseId)
         {
-            var workout = await workoutService.GetWorkoutAsync(workoutId);
+            var workout = await workoutRepository.GetWorkoutAsync(workoutId);
             if (workout == null)
             {
                 return NotFound();
             }
-            if (!userSessionService.IsCurrentUser(workout.AuthorId))
+            if (!userCacheService.IsCurrentUser(workout.AuthorId))
             {
                 return Forbid();
             }
 
-            logger.LogInformation("Trying to remove an exercise from the workout...");
-
-            var exerciseToRemove = workout.WorkoutExercises.SingleOrDefault(x => x.ExerciseId == exerciseId);
-            if (exerciseToRemove != null)
-            {
-                workout.WorkoutExercises.Remove(exerciseToRemove);
-                await db.SaveChangesAsync();
-                logger.LogInformation("Exercise removed from the workout successfully");
-            }
-            else
-            {
-                logger.LogWarning("Exercise with ID {ExerciseId} not found in workout", exerciseId);
-            }
-
+            await workoutEditorService.RemoveExerciseAsync(exerciseId, workout);
+            
             return RedirectToAction(nameof(Save), new { id = workoutId });
         }
 
         public async Task<IActionResult> RemoveSuperset(int workoutId, int supersetId)
         {
-            var workout = await workoutService.GetWorkoutAsync(workoutId);
+            var workout = await workoutRepository.GetWorkoutAsync(workoutId);
             if (workout == null)
             {
                 return NotFound();
             }
-            if (!userSessionService.IsCurrentUser(workout.AuthorId))
+            if (!userCacheService.IsCurrentUser(workout.AuthorId))
             {
                 return Forbid();
             }
 
-            logger.LogInformation("Trying to remove a superset from the workout...");
-
-            var supersetToRemove = workout.Supersets.SingleOrDefault(x => x.Id == supersetId);
-            if (supersetToRemove != null)
-            {
-                db.RemoveRange(supersetToRemove.WorkoutExercises);
-                workout.Supersets.Remove(supersetToRemove);
-                await db.SaveChangesAsync();
-                logger.LogInformation("Superset removed from the workout successfully");
-            }
-            else
-            {
-                logger.LogWarning("Superset with ID {SupersetId} not found in workout", supersetId);
-            }
+            await workoutEditorService.RemoveSupersetAsync(supersetId, workout);
 
             return RedirectToAction(nameof(Save), new { id = workoutId });
         }
@@ -231,19 +162,19 @@ namespace SportWeb.Controllers
         public async Task<IActionResult> Save(int workoutId)
         {
             logger.LogInformation("We are on the GET method");
-            var workout = await workoutService.GetWorkoutAsync(workoutId);
+            var workout = await workoutRepository.GetWorkoutAsync(workoutId);
 
             if (workout == null)
             {
                 return NotFound();
             }
-            if (!userSessionService.IsCurrentUser(workout.AuthorId))
+            if (!userCacheService.IsCurrentUser(workout.AuthorId))
             {
                 return Forbid();
             }
             HttpContext.Session.Set("SelectedWorkout", workout);
 
-            var workoutItems = workoutService.SortWorkoutItems([.. workout.WorkoutExercises], [.. workout.Supersets]);
+            var workoutItems = workoutEditorService.SortWorkoutItems([.. workout.WorkoutExercises], [.. workout.Supersets]);
 
             WorkoutViewModel model = new()
             {
@@ -263,96 +194,21 @@ namespace SportWeb.Controllers
             Log.VariableLog(logger, nameof(isPublic), isPublic);
             Log.VariableLog(logger, nameof(description), description);
             logger.LogInformation($"IsPublic is {isPublic}");
-            logger.LogError("Saving order for workout with ID {WorkoutId}. Received {Count} workout positions.", workoutId, workoutPositions.Count);
+            logger.LogInformation("Saving order for workout with ID {WorkoutId}. Received {Count} workout positions.", workoutId, workoutPositions.Count);
+
             foreach (var position in workoutPositions)
             {
-                logger.LogError("Workout Position Model Details: Id = {Id}, Position = {Position}, IsSuperset = {IsSuperset}, SupersetId = {SupersetId}",
+                logger.LogInformation("Workout Position Model Details: Id = {Id}, Position = {Position}, IsSuperset = {IsSuperset}, SupersetId = {SupersetId}",
                     position.Id, position.Position, position.IsSuperset, position.SupersetId.HasValue ? position.SupersetId.Value.ToString() : "null");
             }
-            var workout = await workoutService.GetWorkoutAsync(workoutId);
+            var workout = await workoutRepository.GetWorkoutAsync(workoutId);
             if (workout == null)
             {
                 return NotFound();
             }
-            var supersetsId = workout.Supersets.ToDictionary(x => x.Id);
-            var workoutExercisesId = workout.WorkoutExercises.ToDictionary(x => x.ExerciseId);
-            foreach (var position in workoutPositions)
-            {
-                switch (position)
-                {
-                    case { IsSuperset: true }:
-                        supersetsId[position.Id].Position = position.Position;
-                        break;
-
-                    case { SupersetId: not null }:
-                        workoutExercisesId[position.Id].Position = position.Position;
-                        workoutExercisesId[position.Id].SupersetId = position.SupersetId;
-                        break;
-
-                    default:
-                        workoutExercisesId[position.Id].Position = position.Position;
-                        workoutExercisesId[position.Id].SupersetId = null;
-                        break;
-                }
-            }
-            workout.IsPublic = isPublic;
-            workout.Description = description;
-            if (db.ChangeTracker.HasChanges())
-            {
-                await db.SaveChangesAsync();
-                logger.LogInformation("Workout positions updated successfully");
-            }
-            else
-            {
-                logger.LogWarning("Workout positions were not updated");
-            }
+            await workoutEditorService.UpdateWorkoutPositionsAsync(workout, workoutPositions, isPublic, description);
             HttpContext.Session.Remove("SelectedWorkout");
             return RedirectToAction(nameof(Save), new { id = workoutId });
         }
-
-        /*
-        if (model == null || !ModelState.IsValid)
-        {
-            var errors = ModelState
-            .Where(ms => ms.Value?.Errors.Count > 0)
-            .ToDictionary(
-                kvp => kvp.Key,
-                kvp => kvp.Value?.Errors.Select(e => e.ErrorMessage).ToArray()
-            );
-
-                return BadRequest(new
-                {
-                    Message = "Invalid workout data.",
-                    Errors = errors
-                });
-        }
-
-        var workout = await workoutService.GetWorkoutAsync(model.Id);
-        if (workout == null)
-        {
-            return NotFound();
-        }
-
-        try
-        {
-            workout.IsPublic = model.IsPublic;
-
-            // Создание словарей для быстрого доступа
-            var workoutExerciseDict = workout.WorkoutExercises.ToDictionary(x => x.ExerciseId);
-            var supersetDict = workout.Supersets.ToDictionary(x => x.Id);
-
-            await workoutService.UpdateWorkoutPositions(model.WorkoutItems, model.Id);
-            logger.LogInformation("Workout positions updated successfully");
-            HttpContext.Session.Remove("SelectedWorkout");
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Error occurred while saving workout order.");
-            return StatusCode(500, "Internal server error");
-        }
-
-        return RedirectToAction(nameof(Details), new { id = workoutId });
-        }
-        */
     }
 }

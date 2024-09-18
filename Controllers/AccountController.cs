@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.OutputCaching;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
@@ -17,15 +18,17 @@ namespace SportWeb.Controllers
     public class AccountController(
         ApplicationContext db,
         IUserRepository userRepository,
-        IUserSessionService userSessionService,
+        IUserCacheService userCacheService,
         ILogger<AccountController> logger,
-        IPasswordCryptor passwordCryptor,
+        IPasswordCryptorService passwordCryptor,
         IAvatarService avatarService,
         IFileService fileService,
         IReCaptchaService reCaptchaService,
         IOptions<GoogleReCaptchaSettings> reCaptchaSettings) : Controller
     {
+        
         [HttpGet]
+        [OutputCache(PolicyName = "NoCache")]
         public ActionResult Login()
         {
             var model = new LoginViewModel
@@ -39,6 +42,7 @@ namespace SportWeb.Controllers
         [HttpPost]
         [EnableRateLimiting("LoginRateLimit")]
         [ValidateModelStateFilter]
+        [OutputCache(PolicyName = "NoCache")]
         public async Task<ActionResult> Login(LoginViewModel form, string? returnUrl)
         {
             var context = Request.HttpContext;
@@ -49,7 +53,8 @@ namespace SportWeb.Controllers
                 TempData["Message"] = ($"Captcha validation failed., ReCaptchaToken: {form.ReCaptchaToken}");
                 return View(form);
             }
-            User? user = db.Users.FirstOrDefault(u => u.Email == form.Email);
+            //User? user = db.Users.FirstOrDefault(u => u.Email == form.Email);
+            User? user = await userRepository.GetUserAsync(form.Email, true);
             if (user == null)
             {
                 ViewBag.Message = "User with such email is not found";
@@ -68,7 +73,7 @@ namespace SportWeb.Controllers
             await context.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, new ClaimsPrincipal(claimsIdentity));
             TempData["Message"] = "Logged in successfully!";
 
-            if (returnUrl != null && Url.IsLocalUrl(returnUrl))
+            if (returnUrl is not null && Url.IsLocalUrl(returnUrl))
             {
                 return Redirect(returnUrl);
             }
@@ -77,10 +82,12 @@ namespace SportWeb.Controllers
         }
 
         [HttpGet]
+        [OutputCache(PolicyName = "NoUniqueContent")]
         public ActionResult Register() => View();
 
         [HttpPost]
         [ValidateModelStateFilter]
+        [OutputCache(PolicyName = "NoCache")]
         public ActionResult Register(RegisterViewModel form)
         {
             if (userRepository.IsUserExistsByEmail(form.Email).Result)
@@ -93,6 +100,8 @@ namespace SportWeb.Controllers
             TempData["Message"] = "Registered successfully!";
             return Redirect("/");
         }
+
+        [OutputCache(PolicyName = "NoCache")]
         public async Task<ActionResult> Logout()
         {
             await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
@@ -103,26 +112,41 @@ namespace SportWeb.Controllers
             return Redirect("/");
         }
 
-        [Route("profile/{id}")]
+        [HttpGet("profile/{id}")]
+        [OutputCache(PolicyName = "UserDataUnique")]
         public async Task<IActionResult> Profile(string id)
         {
+            // Получаем пользователя
             User? user = await userRepository.GetUserAsync(id, true);
             if (user == null)
             {
                 return NotFound();
             }
-            var isUserProfile = userSessionService.IsCurrentUser(int.Parse(id));
-            var addedExercisesQuery = db.Exercises.Where(x => x.AuthorId == user.Id);
-            var addedExercisesCount = await addedExercisesQuery.CountAsync();  // Считаем общее количество
+
+            // Проверяем, является ли профиль текущего пользователя
+            var isUserProfile = userCacheService.IsCurrentUser(int.Parse(id));
+
+            // Запрос для добавленных упражнений пользователя
+            var addedExercisesQuery = db.Exercises
+                .Where(x => x.AuthorId == user.Id)
+                .Select(x => new { x.Id, x.Name, x.Description }); // Загрузить только необходимые поля
+
             var addedExercises = await addedExercisesQuery
-                .Take(4)  // Берем только 4 записи
+                .Take(4)
                 .ToListAsync();
+            var addedExercisesCount = await addedExercisesQuery.CountAsync();
 
-            // Получаем публичные тренировки пользователя
-            var addedWorkoutsQuery = db.Workouts.Where(x => x.AuthorId == user.Id && x.IsPublic);
-            var addedWorkoutsCount = await addedWorkoutsQuery.CountAsync();  // Считаем общее количество
-            var addedWorkouts = await addedWorkoutsQuery.Take(4).ToListAsync();
+            // Запрос для добавленных публичных тренировок пользователя
+            var addedWorkoutsQuery = db.Workouts
+                .Where(x => x.AuthorId == user.Id && x.IsPublic)
+                .Select(x => new { x.Id, x.Name, x.Description }); // Загрузить только необходимые поля
 
+            var addedWorkouts = await addedWorkoutsQuery
+                .Take(4)
+                .ToListAsync();
+            var addedWorkoutsCount = await addedWorkoutsQuery.CountAsync();
+
+            // Заполнение модели
             var model = new ProfileViewModel
             {
                 IsUserProfile = isUserProfile,
@@ -130,32 +154,41 @@ namespace SportWeb.Controllers
                 Avatar = avatarService.GetAvatarUrl(user.Avatar),
                 Description = user.Description,
                 Id = user.Id.ToString(),
-                AddedExercises = addedExercises,
+                AddedExercises = addedExercises.Select(x => new ExerciseViewModel { Id = x.Id, Name = x.Name }).ToList(),
                 AddedExercisesCount = addedExercisesCount,
-                AddedWorkouts = addedWorkouts,
+                AddedWorkouts = addedWorkouts.Select(x => new WorkoutViewModel { Id = x.Id, Name = x.Name }).ToList(),
                 AddedWorkoutsCount = addedWorkoutsCount
             };
 
+            // Если избранное публично, загружаем избранные упражнения
             if (user.IsPublicFavourites)
             {
-                var favouriteExercisesQuery = db.Users.Where(x => x.Id == user.Id).SelectMany(x => x.FavouriteExercises);
-                var favouriteExercises = await favouriteExercisesQuery.Take(4).ToListAsync();
+                var favouriteExercisesQuery = db.Users
+                    .Where(x => x.Id == user.Id)
+                    .SelectMany(x => x.FavouriteExercises)
+                    .Select(x => new { x.Id, x.Name }); // Загрузить только необходимые поля
+
+                var favouriteExercises = await favouriteExercisesQuery
+                    .Take(4)
+                    .ToListAsync();
                 var favouriteExercisesCount = await favouriteExercisesQuery.CountAsync();
-                model.FavouriteExercises = favouriteExercises;
+
+                model.FavouriteExercises = favouriteExercises.Select(x => new ExerciseViewModel { Id = x.Id, Name = x.Name }).ToList();
                 model.FavouriteExercisesCount = favouriteExercisesCount;
             }
 
+            // Возвращаем модель во View
             return View(model);
         }
 
-        [HttpGet]
+        [HttpGet("profile/edit")]
         [Authorize]
-        [Route("profile/edit")]
+        [OutputCache(PolicyName = "UserData")]
         public async Task<IActionResult> Edit()
         {
-            var id = userSessionService.GetCurrentUserId();
-
+            var id = userCacheService.GetCurrentUserId();
             User? user = await userRepository.GetUserAsync(id, true);
+
             if (user == null)
             {
                 return NotFound();
@@ -171,22 +204,22 @@ namespace SportWeb.Controllers
             return View(model);
         }
 
-        [HttpPost]
+        [HttpPost("profile/edit")]
         [Authorize]
-        [Route("profile/edit")]
         [ValidateModelStateFilter]
+        [OutputCache(PolicyName = "NoCache")]
         public async Task<IActionResult> Edit(EditProfileViewModel model)
         {
-            var id = userSessionService.GetCurrentUserId();
+            var id = userCacheService.GetCurrentUserId();
             User? user = await userRepository.GetUserAsync(id, false);
             if (user == null)
             {
                 logger.LogWarning($"User with id {id} not found.");
                 return NotFound();
             }
-
+            
             var fileUpload = model.FileUpload;
-            if (fileUpload != null && fileUpload.Length > 0)
+            if (fileUpload is not null && fileUpload.Length > 0)
             {
                 user.Avatar = avatarService.NewAvatarName(user);
                 var filePath = avatarService.GetAvatarPath(user.Avatar);
@@ -198,7 +231,7 @@ namespace SportWeb.Controllers
             user.Description = model.Description ?? "No description";
             user.IsPublicFavourites = model.IsPublicFavourites;
 
-            if (model.Password != null)
+            if (model.Password is not null)
             {
                 if (model.Password == model.ConfirmPassword && model.Password.Length > 5)
                 {
@@ -215,7 +248,7 @@ namespace SportWeb.Controllers
             {
                 await db.SaveChangesAsync();
                 logger.LogInformation("Changes were made to the database");
-                HttpContext.Session.Set("User", user);
+                userCacheService.RemoveUserFromCacheAsync(user.Id);
             }
             else
             {
@@ -227,9 +260,10 @@ namespace SportWeb.Controllers
 
         [HttpPost]
         [Authorize]
+        [OutputCache(PolicyName = "NoCache")]
         public async Task<IActionResult> Delete()
         {
-            var userId = userSessionService.GetCurrentUserId();
+            var userId = userCacheService.GetCurrentUserId();
 
             if (await userRepository.RemoveUserAsync(userId))
             {

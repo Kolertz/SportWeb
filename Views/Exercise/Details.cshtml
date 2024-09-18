@@ -1,10 +1,6 @@
-﻿@inject IHttpContextAccessor httpContextAccessor;
-@model SportWeb.Models.ExerciseDetailsViewModel
+﻿@model SportWeb.Models.ExerciseDetailsViewModel
 @{
     ViewBag.Title = "Exercise Details";
-
-    var request = httpContextAccessor.HttpContext?.Request;
-    var fullUrl = $"{request?.Scheme}://{request?.Host}{request?.Path}{request?.QueryString}";
 }
 
 <h2>@ViewBag.Title</h2>
@@ -17,7 +13,7 @@
     <p><strong>Description:</strong> @Model.Description</p>
     <p><strong>State:</strong> @Model.State</p>
     <p><strong>Categories:</strong>
-        @if (Model.Categories != null && Model.Categories.Count() > 0)
+        @if (Model.Categories is not null && Model.Categories.Count() > 0)
         {
             <ul>
                 @foreach (var category in Model.Categories)
@@ -56,17 +52,17 @@
     {
         <strong>Favourite❤️</strong>
         <br />
-        <a asp-controller="Exercises" asp-action="RemoveFromFavourites" asp-all-route-data='new Dictionary<string, string> { { "exerciseId", Model.Id.ToString() }, { "returnUrl", fullUrl} }'>Remove from Favourites</a>
+        <a asp-controller="Exercise" asp-action="RemoveFromFavourites" asp-all-route-data='new Dictionary<string, string> { { "exerciseId", Model.Id.ToString() }, { "returnUrl", Model.ReturnUrl} }'>Remove from Favourites</a>
     }
     else
     {
-        <a asp-controller="Exercises" asp-action="AddToFavourites" asp-all-route-data='new Dictionary<string, string> { { "exerciseId", Model.Id.ToString() }, { "returnUrl", fullUrl} }'>Add to Favourites</a>
+        <a asp-controller="Exercise" asp-action="AddToFavourites" asp-all-route-data='new Dictionary<string, string> { { "exerciseId", Model.Id.ToString() }, { "returnUrl", Model.ReturnUrl} }'>Add to Favourites</a>
     }
 }
 <br />
-@if (ViewBag.IsAdmin || User.Identity != null && Model.AuthorId.ToString() == User.Identity.Name)
+@if (ViewBag.IsAdmin || User.Identity is not null && Model.AuthorId.ToString() == User.Identity.Name)
 {
     <div>
-        <a asp-action="Edit" asp-controller="Exercises" asp-route-id="@Model.Id">Edit</a>
+        <a asp-action="Edit" asp-controller="Exercise" asp-route-id="@Model.Id">Edit</a>
     </div>
 }

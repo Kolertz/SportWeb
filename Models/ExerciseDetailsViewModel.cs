@@ -13,5 +13,6 @@ namespace SportWeb.Models
         public IEnumerable<Category>? Categories { get; set; }
         public ExerciseState State { get; set; }
         public bool IsFavourite { get; set; }
+        public required string ReturnUrl { get; set; }
     }
 }

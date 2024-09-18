@@ -1,6 +1,6 @@
 ﻿@model ProfileHeaderViewModel
 
-@if (User.Identity != null && User.Identity.IsAuthenticated)
+@if (User.Identity is not null && User.Identity.IsAuthenticated)
 {
     <div>
         <a asp-action="Profile" asp-controller="Account" asp-route-id="@Model.Id">

@@ -1,6 +1,6 @@
 ﻿using Microsoft.AspNetCore.Razor.TagHelpers;
 
-namespace SportWeb.TagHelpers
+namespace SportWeb.Helpers.TagHelpers
 {
     [HtmlTargetElement("avatar-image", Attributes = "user-id")]
     public class AvatarTagHelper : TagHelper

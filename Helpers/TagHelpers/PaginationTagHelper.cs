@@ -5,21 +5,14 @@ using Microsoft.AspNetCore.Mvc.ViewFeatures;
 using Microsoft.AspNetCore.Razor.TagHelpers;
 using SportWeb.Models;
 
-namespace SportWeb.TagHelpers
+namespace SportWeb.Helpers.TagHelpers
 {
     [HtmlTargetElement("pagination", Attributes = "pagination-model")]
-    public class PaginationTagHelper : TagHelper
+    public class PaginationTagHelper(IUrlHelperFactory helperFactory) : TagHelper
     {
-        private IUrlHelperFactory _urlHelperFactory;
-
-        public PaginationTagHelper(IUrlHelperFactory helperFactory)
-        {
-            _urlHelperFactory = helperFactory;
-        }
-
         [ViewContext]
         [HtmlAttributeNotBound]
-        public ViewContext ViewContext { get; set; } = null!;
+        public required ViewContext ViewContext { get; set; }
 
         [HtmlAttributeName("pagination-model")]
         public PaginationModel? PaginationModel { get; set; }
@@ -34,8 +27,8 @@ namespace SportWeb.TagHelpers
             var ul = new TagBuilder("ul");
             ul.AddCssClass("pagination");
 
-            IUrlHelper urlHelper = _urlHelperFactory.GetUrlHelper(ViewContext);
-            TagBuilder result = new TagBuilder("div");
+            IUrlHelper urlHelper = helperFactory.GetUrlHelper(ViewContext);
+            TagBuilder result = new("div");
             for (int i = PaginationModel.StartPage; i <= PaginationModel.EndPage; i++)
             {
                 var li = new TagBuilder("li");

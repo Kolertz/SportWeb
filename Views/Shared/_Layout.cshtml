@@ -40,7 +40,7 @@
     <header>
         <h1>SPORTWeb</h1>
         @await Component.InvokeAsync("ProfileHeaderComponent")
-        @if (ViewBag.Message != null)
+        @if (ViewBag.Message is not null)
         {
             <p>@ViewBag.Message</p>
         }

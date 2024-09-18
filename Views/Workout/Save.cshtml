@@ -21,7 +21,7 @@
                     <input type="hidden" name="WorkoutPositions[@i].IsSuperset" value="false" form="saveOrderForm" />
                     <input type="hidden" name="WorkoutPositions[@i].SupersetId" value="" form="saveOrderForm" />
 
-                    <h3><a asp-action="Details" asp-controller="Exercises" asp-route-id="@exercise.Id">@exercise.Name</a></h3>
+                    <h3><a asp-action="Details" asp-controller="Exercise" asp-route-id="@exercise.Id">@exercise.Name</a></h3>
                     <p>@exercise.Description</p>
                     <p><strong>Author:</strong><a asp-controller="Account" asp-action="Profile" asp-route-id="@exercise.AuthorId">@exercise.User?.Name</a></p>
 
@@ -51,7 +51,7 @@
                                 <input type="hidden" name="WorkoutPositions[@i + @j + 1].IsSuperset" value="false" form="saveOrderForm" />
                                 <input type="hidden" name="WorkoutPositions[@i + @j + 1].SupersetId" value="@superset.Id" form="saveOrderForm" />
 
-                                <h3><a asp-action="Details" asp-controller="Exercises" asp-route-id="@exerciseInSuperset.Id">@exerciseInSuperset.Name</a></h3>
+                                <h3><a asp-action="Details" asp-controller="Exercise" asp-route-id="@exerciseInSuperset.Id">@exerciseInSuperset.Name</a></h3>
                                 <p>@exerciseInSuperset.Description</p>
                                 <p><strong>Author:</strong><a asp-controller="Account" asp-action="Profile" asp-route-id="@exerciseInSuperset.AuthorId">@exerciseInSuperset.User?.Name</a></p>
                                 <br />
@@ -93,7 +93,7 @@
 }
 
 <br />
-<form asp-action="Index" asp-controller="Exercises">
+<form asp-action="Index" asp-controller="Exercise">
     @Html.AntiForgeryToken()
     <input type="hidden" name="workoutId" value="@Model.Id" />
     <button type="submit" class="btn btn-primary">Add Exercise</button>

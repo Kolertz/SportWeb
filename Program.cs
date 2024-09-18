@@ -9,12 +9,14 @@ using Microsoft.Extensions.Configuration;
 using SportWeb.Filters;
 using SportWeb.Middlewares;
 using SportWeb.Models;
+using SportWeb.Models.Entities;
 using SportWeb.Services;
 using System.Text.Json.Serialization;
 using System.Threading.RateLimiting;
-
+// TODO Добавить изменения кэшированных объектов при их изменении
+// TODO Добавить использования OutputCache
 var builder = WebApplication.CreateBuilder(args);
-// Add services to the container.
+
 builder.Services.AddControllersWithViews(options =>
 {
     options.Filters.Add<MessageFilter>();
@@ -42,7 +44,7 @@ builder.Services.AddAuthorizationBuilder()
         policy.RequireAssertion(context =>
         {
             var id = context.User.Identity?.Name;
-            return id != null && admins!.Contains(id);
+            return id is not null && admins!.Contains(id);
         });
     });
 
@@ -81,16 +83,93 @@ builder.Services.AddDistributedMemoryCache();// добавляем IDistributedMemoryCach
 builder.Services.AddSession();  // добавляем сервисы сессии
 
 builder.Services.AddTransient<IAvatarService, AvatarService>();
-builder.Services.AddTransient<IPasswordCryptor, PasswordCryptor>();
+builder.Services.AddTransient<IPasswordCryptorService, PasswordCryptorService>();
 builder.Services.AddTransient<IFileService, FileService>();
 builder.Services.AddTransient<IPictureService, PictureService>();
 builder.Services.AddTransient<IPaginationService, PaginationService>();
 builder.Services.AddScoped<IUserRepository, UserService>();
 builder.Services.AddScoped<IUserRoleService, UserService>();
-builder.Services.AddScoped<IUserSessionService, UserService>();
-builder.Services.AddScoped<IWorkoutService, WorkoutService>();
+builder.Services.AddScoped<IUserCacheService, UserService>();
 builder.Services.AddScoped<IExerciseService, ExerciseService>();
+builder.Services.AddScoped<IExerciseCacheService, ExerciseService>();
+builder.Services.AddScoped<IWorkoutRepository, WorkoutService>();
+builder.Services.AddScoped<IWorkoutEditorService, WorkoutService>();
+builder.Services.AddScoped<IWorkoutCacheService, WorkoutService>();
+builder.Services.AddScoped<ICategoryService, CategoryService>();
 builder.Services.AddSingleton<IOutboundParameterTransformer, KebabCaseParameterTransformer>();
+
+builder.Services.AddOutputCache(options =>
+{
+    options.AddPolicy("NoUniqueContent", policy =>
+    {
+        policy.Expire(TimeSpan.FromHours(6));
+    });
+
+    options.AddPolicy("UserData", policy =>
+    {
+        policy.Expire(TimeSpan.FromMinutes(30));
+        policy.SetVaryByRouteValue("id");
+        policy.Tag("UserData");
+    });
+
+    options.AddPolicy("UserDataUnique", policy =>
+    {
+        policy.Expire(TimeSpan.FromMinutes(30));
+        policy.SetVaryByRouteValue("id");
+        policy.Tag("UserData");
+        policy.Tag("UserDataUnique");
+        policy.VaryByValue((context, token) =>
+        {
+            var id = context.User.Identity?.Name;
+            return new ValueTask<KeyValuePair<string, string>>(
+                new KeyValuePair<string, string>("User", id ?? ""));
+        });
+    });
+
+    options.AddPolicy("NoCache", policy =>
+    {
+        policy.NoCache();
+    });
+
+    options.AddPolicy("ExerciseList", policy =>
+    {
+        policy.Expire(TimeSpan.FromMinutes(10));
+        policy.Tag("ExerciseList");
+    });
+
+    options.AddPolicy("ExerciseListUnique", policy =>
+    {
+        policy.Expire(TimeSpan.FromMinutes(10));
+        policy.Tag("ExerciseListUnique");
+        policy.Tag("ExerciseList");
+        policy.SetVaryByRouteValue("id");
+        policy.VaryByValue((context, token) =>
+        {
+            var userCacheService = context.RequestServices.GetRequiredService<IUserCacheService>();
+            var id = context.Request.RouteValues["id"]?.ToString();
+            var isCurrentUser = userCacheService.IsCurrentUser(int.Parse(id ?? "0"));
+            return new ValueTask<KeyValuePair<string, string>>(
+                new KeyValuePair<string, string>("IsCurrentUser", isCurrentUser.ToString()));
+        });
+    });
+
+    options.AddPolicy("WorkoutList", policy =>
+    {
+
+    });
+
+    options.AddPolicy("IndexPage", policy =>
+    {
+        policy.Expire(TimeSpan.FromHours(6)); // Время жизни кэша
+        policy.VaryByValue((context, token) =>
+        {
+            // Проверка, авторизован ли пользователь
+            var isAuthenticated = context.User.Identity?.IsAuthenticated ?? false;
+            return new ValueTask<KeyValuePair<string, string>>(
+                new KeyValuePair<string, string>("AuthStatus", isAuthenticated.ToString()));
+        });
+    });
+});
 
 builder.Services.AddRateLimiter(options =>
 {
@@ -161,7 +240,6 @@ else
 }
 var options = new RewriteOptions().AddRedirectToHttpsPermanent();
 app.UseRewriter(options);
-
 app.UseSession();
 app.UseHttpsRedirection();
 app.UseStaticFiles(new StaticFileOptions()

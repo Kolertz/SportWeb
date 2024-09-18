@@ -7,12 +7,12 @@ namespace SportWeb.Models.Entities
         public int WorkoutId { get; set; }
 
         [JsonIgnore]
-        public Workout Workout { get; set; } = null!;
+        public Workout? Workout { get; set; }
 
         public int ExerciseId { get; set; }
 
         [JsonIgnore]
-        public Exercise Exercise { get; set; } = null!;
+        public  Exercise? Exercise { get; set; }
 
         public int Position { get; set; }
         public int? SupersetId { get; set; }

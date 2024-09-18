@@ -1,73 +1,47 @@
 ﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
+using Microsoft.AspNetCore.OutputCaching;
 using Microsoft.EntityFrameworkCore;
 using SportWeb.Extensions;
 using SportWeb.Filters;
 using SportWeb.Models;
 using SportWeb.Models.Entities;
 using SportWeb.Services;
+using System.Collections.Generic;
 
 namespace SportWeb.Controllers
 {
-    public class ExercisesController(
+    public class ExerciseController(
         ApplicationContext db,
         IExerciseService exerciseService,
-        ILogger<ExercisesController> logger,
+        ILogger<ExerciseController> logger,
         IUserRepository userRepository,
-        IUserSessionService userSessionService,
+        IUserCacheService userCacheService,
         IFileService fileService,
         IPictureService pictureService,
         IPaginationService paginationService,
-        IAuthorizationService authorizationService) : Controller
+        IAuthorizationService authorizationService,
+        ICategoryService categoryService,
+        IExerciseCacheService exerciseCacheService) : Controller
     {
+        [HttpGet]
+        [OutputCache(PolicyName = "NoCache")]
         public async Task<IActionResult> Index(int? muscle, int? movement, int? tag, int? equipment, string? name, int page = 1, int pageSize = 5)
         {
-            IQueryable<Exercise> exercises = db.Exercises.Where(x => x.State == ExerciseState.Approved).Include(u => u.User).Include(c => c.Categories).Include(u => u.UsersWhoFavourited).OrderBy(x => x.Name);
+            var exercises = exerciseService.GetExercisesAsync(muscle, movement, tag, equipment, name);
 
-            if (muscle != null && muscle != 0)
-            {
-                exercises = exercises.Where(e => e.Categories!.Any(c => c.Id == muscle));
-            }
-            if (movement != null && movement != 0)
-            {
-                exercises = exercises.Where(e => e.Categories!.Any(c => c.Id == movement));
-            }
-            if (tag != null && tag != 0)
-            {
-                exercises = exercises.Where(e => e.Categories!.Any(c => c.Id == tag));
-            }
-            if (equipment != null && equipment != 0)
-            {
-                exercises = exercises.Where(e => e.Categories!.Any(c => c.Id == equipment));
-            }
-            if (name != null && name.Length > 1)
-            {
-                exercises = exercises.Where(p => p.Name.Contains(name));
-            }
             (var items, var paginationModel) = await paginationService.GetPaginatedResultAsync(exercises, page, pageSize);
-            var result = items.Select(x => new IndexExerciseViewModel
-            {
-                Id = x.Id,
-                Name = x.Name,
-                Description = x.Description,
-                AuthorId = x.AuthorId,
-                Username = x.User != null ? x.User.Name : "Unknown",
-                IsFavourite = x.UsersWhoFavourited.Any(u => u.Id == userSessionService.GetCurrentUserId())
-            }).ToList();
 
-            var categories = db.Categories.ToList();
-            var movements = categories.Where(x => x.Type == "Movement Pattern").ToList();
-            var tags = categories.Where(x => x.Type == "Other").ToList();
-            var equipments = categories.Where(x => x.Type == "Equipment").ToList();
-            var muscles = categories.Where(x => x.Type == "Muscle Group").ToList();
+            var result = exerciseService.GetExerciseViewModels(items);
 
-            movements.Insert(0, new Category { Name = "All", Id = 0 });
-            tags.Insert(0, new Category { Name = "All", Id = 0 });
-            equipments.Insert(0, new Category { Name = "All", Id = 0 });
-            muscles.Insert(0, new Category { Name = "All", Id = 0 });
+            var (movements, tags, equipments, muscles) = await categoryService.GetCategoryFiltersAsync();
 
             ViewBag.SelectedWorkout = HttpContext.Session.Get<Workout>("SelectedWorkout");
+
+            var request = HttpContext.Request;
+            string returnUrl = $"{request.Scheme}://{request.Host}{request.Path}{request.QueryString}";
 
             var exerciseFilterModel = new ExerciseFilterModel
             {
@@ -81,29 +55,36 @@ namespace SportWeb.Controllers
             {
                 FilterModel = exerciseFilterModel,
                 PaginationModel = paginationModel,
-                Exercises = result
+                Exercises = result,
+                ReturnUrl = returnUrl
             };
             return View(model);
         }
 
         public async Task<IActionResult> Details(int id)
         {
-            var exercise = await db.Exercises.Include(x => x.User).Include(x => x.Categories).Include(x => x.UsersWhoFavourited).FirstOrDefaultAsync(x => x.Id == id);
+            //var exercise = await db.Exercises.Include(x => x.User).Include(x => x.Categories).Include(x => x.UsersWhoFavourited).FirstOrDefaultAsync(x => x.Id == id);
+            var exercise = await exerciseService.GetExerciseAsync(id, includes: ["User", "Categories", "UsersWhoFavourited"]);
             if (exercise == null)
             {
                 return NotFound();
             }
+
+            var request = HttpContext.Request;
+            string returnUrl = $"{request.Scheme}://{request.Host}{request.Path}{request.QueryString}";
+
             var model = new ExerciseDetailsViewModel
             {
                 Id = exercise.Id,
                 Description = exercise.Description,
                 Name = exercise.Name,
                 AuthorId = exercise.AuthorId,
-                AuthorName = exercise.User != null ? exercise.User.Name : "Unknown",
+                AuthorName = exercise.User is not null ? exercise.User.Name : "Unknown",
                 PictureUrl = pictureService.GetPictureUrl(exercise.PictureUrl),
                 Categories = exercise.Categories,
                 State = exercise.State,
-                IsFavourite = exercise.UsersWhoFavourited.Any(x => x.Id == userSessionService.GetCurrentUserId()),
+                IsFavourite = exercise.UsersWhoFavourited.Any(x => x.Id == userCacheService.GetCurrentUserId()),
+                ReturnUrl = returnUrl
             };
             bool isAdmin = authorizationService.AuthorizeAsync(User, "AdminOnly").Result.Succeeded;
             ViewBag.IsAdmin = isAdmin;
@@ -123,6 +104,7 @@ namespace SportWeb.Controllers
 
         [HttpPost]
         [Authorize]
+        [OutputCache(PolicyName = "NoCache")]
         public async Task<IActionResult> Add(EditExerciseViewModel model)
         {
             var exercise = model.Exercise;
@@ -146,31 +128,8 @@ namespace SportWeb.Controllers
                 model.Categories = await db.Categories.ToListAsync();
                 return View(model);
             }
-
             var isAdmin = (await authorizationService.AuthorizeAsync(User, "AdminOnly")).Succeeded;
-
-            if (!isAdmin)
-            {
-                exercise.State = ExerciseState.Pending;
-                logger.LogInformation("Exercise state changed to pending");
-            }
-            else
-            {
-                exercise.State = ExerciseState.Approved;
-                logger.LogInformation("Exercise state changed to approved");
-            }
-            exercise.AuthorId = int.Parse(User.Identity!.Name!);
-            exercise.Categories = (List<Category>?)model.SelectedCategories;
-
-            var fileUpload = model.FileUpload;
-            if (fileUpload != null && fileUpload.Length > 0)
-            {
-                var filePath = pictureService.GetPicturePath(pictureService.NewPictureName(exercise));
-                await fileService.UploadFile(fileUpload, filePath);
-            }
-
-            await db.Exercises.AddAsync(exercise);
-            await db.SaveChangesAsync();
+            await exerciseService.AddExerciseAsync(isAdmin, exercise, model);
             TempData["Message"] = "Exercise created successfully!";
             return Redirect("/Exercises");
         }
@@ -186,7 +145,7 @@ namespace SportWeb.Controllers
             {
                 return NotFound();
             }
-            if (!isAdmin && (userSessionService.GetCurrentUserId() != exercise.AuthorId))
+            if (!isAdmin && (userCacheService.GetCurrentUserId() != exercise.AuthorId))
             {
                 return Forbid();
             }
@@ -199,6 +158,7 @@ namespace SportWeb.Controllers
         [HttpPost]
         [Authorize]
         [ValidateModelStateFilter]
+        [OutputCache(PolicyName = "NoCache")]
         public async Task<IActionResult> Edit(EditExerciseViewModel model)
         {
             var exercise = model.Exercise;
@@ -219,7 +179,7 @@ namespace SportWeb.Controllers
             }
 
             var fileUpload = model.FileUpload;
-            if (fileUpload != null && fileUpload.Length > 0)
+            if (fileUpload is not null && fileUpload.Length > 0)
             {
                 exercise.PictureUrl = pictureService.NewPictureName(exercise);
                 var filePath = pictureService.GetPicturePath(exercise.PictureUrl);
@@ -227,17 +187,26 @@ namespace SportWeb.Controllers
             }
 
             db.Exercises.Update(exercise);
-            await db.SaveChangesAsync();
-            TempData["Message"] = "Exercise edited successfully!";
+            if (db.ChangeTracker.HasChanges())
+            {
+                await db.SaveChangesAsync();
+                exerciseCacheService.RemoveExerciseFromCacheAsync(exercise.Id);
+                TempData["Message"] = "Exercise edited successfully!";
+            } else
+            {
+                TempData["Message"] = "No changes were made.";
+            }
+            
+            
 
             return RedirectToAction(nameof(Index));
         }
 
-        [Route("profile/{id}/added-exercises")]
-        public async Task<IActionResult> UserExercises(int id, int page = 1, int pageSize = 5, string username = "???")
+        [HttpGet("profile/{id}/added-exercises")]
+        public async Task<IActionResult> UserExercises(int id, int page = 1, int pageSize = 5)
         {
-            var isUserExercises = userSessionService.IsCurrentUser(id);
-
+            var isUserExercises = userCacheService.IsCurrentUser(id);
+            var username = await userRepository.GetUserNameAsync(id);
             string title;
             IQueryable<Exercise> exercises = db.Exercises.Where(x => x.AuthorId == id).OrderBy(x => x.Id);
             if (isUserExercises)
@@ -270,11 +239,12 @@ namespace SportWeb.Controllers
             return View(model);
         }
 
-        [HttpGet]
-        [Route("Profile/{id}/favourite-exercises")]
-        public async Task<IActionResult> Favourites(int id, int page = 1, int pageSize = 5, string username = "???")
+        [HttpGet("Profile/{id}/favourite-exercises")]
+        [OutputCache()]
+        public async Task<IActionResult> Favourites(int id, int page = 1, int pageSize = 5)
         {
-            var isUserExercises = userSessionService.IsCurrentUser(id);
+            var username = await userRepository.GetUserNameAsync(id);
+            var isUserExercises = userCacheService.IsCurrentUser(id);
             IQueryable<Exercise> exercises = db.Users.Where(x => x.Id == id).SelectMany(x => x.FavouriteExercises).OrderBy(x => x.Id);
             var user = await userRepository.GetUserAsync(id);
 
@@ -307,6 +277,7 @@ namespace SportWeb.Controllers
             return View("UserExercises", model);
         }
 
+        [OutputCache(PolicyName = "NoCache")]
         public async Task<IActionResult> AddToFavourites(int exerciseId, string? returnUrl)
         {
             Log.VariableLog(logger, nameof(returnUrl), returnUrl ?? "null");
@@ -316,7 +287,7 @@ namespace SportWeb.Controllers
                 return NotFound();
             }
             logger.LogInformation("Exercise is found");
-            var user = await userRepository.GetUserAsync(userSessionService.GetCurrentUserId());
+            var user = await userRepository.GetUserAsync(userCacheService.GetCurrentUserId());
             if (user == null)
             {
                 return NotFound();
@@ -324,44 +295,42 @@ namespace SportWeb.Controllers
             logger.LogInformation("User is found");
             user.FavouriteExercises.Add(exercise);
             await db.SaveChangesAsync();
-
+            exerciseCacheService.RemoveExerciseFromCacheAsync(exercise.Id);
+            userCacheService.RemoveUserFromCacheAsync(user.Id);
             TempData["Message"] = "Exercise added to Favourites successfully!";
             logger.LogInformation("Exercise added to Favourites successfully");
 
-            if (returnUrl != null && Url.IsLocalUrl(returnUrl))
+            if (returnUrl is not null && Url.IsLocalUrl(returnUrl))
             {
                 return Redirect(returnUrl);
             }
             return RedirectToAction(nameof(Details), new { id = exerciseId });
         }
 
+        [OutputCache(PolicyName = "NoCache")]
         public async Task<IActionResult> RemoveFromFavourites(int exerciseId, string? returnUrl)
         {
-            //var exercise = await exerciseService.GetExerciseAsync(exerciseId, false, ["UsersWhoFavourited"]);
-            var exercise = await db.Exercises.Include(x => x.UsersWhoFavourited).FirstOrDefaultAsync(x => x.Id == exerciseId);
+            var exercise = await exerciseService.GetExerciseAsync(exerciseId, false, ["UsersWhoFavourited"]);
+            //var exercise = await db.Exercises.Include(x => x.UsersWhoFavourited).FirstOrDefaultAsync(x => x.Id == exerciseId);
             if (exercise == null)
             {
                 return NotFound();
             }
-            var user = exercise.UsersWhoFavourited.FirstOrDefault(u => u.Id == userSessionService.GetCurrentUserId());
+            var user = exercise.UsersWhoFavourited.FirstOrDefault(u => u.Id == userCacheService.GetCurrentUserId());
             if (user == null)
             {
                 return NotFound();
             }
             exercise.UsersWhoFavourited.Remove(user);
 
-            if (db.ChangeTracker.HasChanges())
-            {
-                await db.SaveChangesAsync();
-                TempData["Message"] = "Exercise removed from Favourites successfully :(";
-                logger.LogInformation("Exercise removed from Favourites successfully");
-            }
-            else
-            {
-                logger.LogError($"Change tracker has no changes, User id is {user.Id}, exercise id is {exercise.Id}");
-            }
 
-            if (returnUrl != null && Url.IsLocalUrl(returnUrl))
+            await db.SaveChangesAsync();
+            exerciseCacheService.RemoveExerciseFromCacheAsync(exercise.Id);
+            userCacheService.RemoveUserFromCacheAsync(user.Id);
+            TempData["Message"] = "Exercise removed from Favourites successfully :(";
+            logger.LogInformation("Exercise removed from Favourites successfully");
+
+            if (returnUrl is not null && Url.IsLocalUrl(returnUrl))
             {
                 return Redirect(returnUrl);
             }

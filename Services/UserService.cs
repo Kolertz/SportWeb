@@ -1,4 +1,6 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.AspNetCore.OutputCaching;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 using SportWeb.Extensions;
 using SportWeb.Models;
 using SportWeb.Models.Entities;
@@ -8,20 +10,17 @@ namespace SportWeb.Services
     public interface IUserRepository
     {
         Task<User?> GetUserAsync<T>(T id, bool noTracking = false, string[]? includes = null);
-
         Task<User?> AddUserAsync(string? name, string email, string password);
-
         Task<bool> RemoveUserAsync<T>(T id);
-
         Task<bool> IsUserExistsByEmail(string email);
+        Task<string> GetUserNameAsync(int id);
     }
 
-    public interface IUserSessionService
+    public interface IUserCacheService
     {
-        Task<User?> GetUserFromSession(int id);
-
+        void SetUserToCache(User? user);
         bool IsCurrentUser(int? id);
-
+        Task RemoveUserFromCacheAsync(int id);
         int? GetCurrentUserId();
     }
 
@@ -30,7 +29,7 @@ namespace SportWeb.Services
         bool IsAdmin<T>(T id);
     }
 
-    public class UserService(ApplicationContext db, ILogger<UserService> logger, IPasswordCryptor passwordCryptor, IHttpContextAccessor httpContextAccessor) : IUserRepository, IUserSessionService, IUserRoleService
+    public class UserService(ApplicationContext db, ILogger<UserService> logger, IPasswordCryptorService passwordCryptor, IHttpContextAccessor httpContextAccessor, IMemoryCache memoryCache, IOutputCacheStore outputCacheStore) : IUserRepository, IUserCacheService, IUserRoleService
     {
         public async Task<User?> GetUserAsync<T>(T id, bool noTracking = false, string[]? includes = null)
         {
@@ -43,32 +42,46 @@ namespace SportWeb.Services
                 }
 
                 int intId = CastToInt(id);
-
-                if (IsCurrentUser(intId) && includes == null)
-                {
-                    logger.LogInformation("User is current user");
-                    var user = await GetUserFromSession(intId);
-                    if (!noTracking && user != null && !db.Users.Local.Any(u => u.Id == intId))
-                    {
-                        db.Users.Attach(user);
-                    }
-                    return user;
-                }
-
                 IQueryable<User> query = db.Users;
-                if (includes != null)
+                if (noTracking)
+                {
+                    query = query.AsNoTracking();
+                }
+                if (intId == 0)
+                {
+                    logger.LogInformation("Email passed to GetUserAsync");
+                    return await db.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Email == id.ToString());
+                }
+                var user = GetUserFromCache(intId);
+                if (user == null)
+                {
+                    if (includes is not null && includes.Length != 0)
+                    {
+                        foreach (var include in includes)
+                        {
+                            query = query.Include(include);
+                        }
+                    }
+                    
+                user = await query.FirstOrDefaultAsync(u => u.Id == intId);
+                } else if (includes is not null && includes.Length != 0) // Если требуются дополнительные данные (включения)
                 {
                     foreach (var include in includes)
                     {
-                        query = query.Include(include);
+                        // Проверим, загружены ли включения в закэшированного пользователя
+                        var entry = db.Entry(user);
+                        if (!entry.References.Any(r => r.Metadata.Name == include) ||
+                            !entry.Collections.Any(c => c.Metadata.Name == include))
+                        {
+                            // Если включения не загружены, загрузим их из базы данных
+                            await entry.Reference(include).LoadAsync();
+                            await entry.Collection(include).LoadAsync();
+                        }
                     }
                 }
-                if (noTracking)
-                {
-                    return await query.AsNoTracking().FirstOrDefaultAsync(u => u.Id == intId);
-                }
-
-                return await query.FirstOrDefaultAsync(u => u.Id == intId);
+                // Обновляем данные в кэше с новыми включениями
+                SetUserToCache(user);
+                return user;
             }
             catch (Exception ex)
             {
@@ -77,45 +90,36 @@ namespace SportWeb.Services
             }
         }
 
-        public async Task<User?> GetUserFromSession(int id)
+        private User? GetUserFromCache(int id)
         {
-            var context = httpContextAccessor.HttpContext;
-            if (context != null && GetCurrentUserId() == id)
+            if (memoryCache.TryGetValue(GetUserCacheKey(id), out User? user))
             {
-                if (!context.Session.Keys.Contains("User"))
-                {
-                    logger.LogInformation("User is not in session");
-                    await SetUserToSession(id);
-                }
-
-                return context.Session.Get<User>("User");
+                logger.LogInformation($"User with id {id} retrieved from cache.");
+                return user;
             }
+
+            logger.LogInformation($"User with id {id} not found in cache. Returning null.");
             return null;
+        }
+
+        public void SetUserToCache(User? user)
+        {
+            if (user == null)
+            {
+                logger.LogWarning("Null user passed to SetUserToCache");
+                return;
+            }
+            memoryCache.Set(GetUserCacheKey(user.Id), user, new MemoryCacheEntryOptions
+            {
+                SlidingExpiration = TimeSpan.FromMinutes(30) // Настройка времени жизни в кэше
+            });
+            logger.LogInformation($"User {user.Name} was set to cache");
         }
 
         public bool IsCurrentUser(int? id)
         {
             var userId = GetCurrentUserId();
             return userId.ToString() == id.ToString();
-        }
-
-        private async Task SetUserToSession(int id)
-        {
-            var user = await db.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Id == id);
-            if (user != null)
-            {
-                SetUserToSession(user);
-            }
-        }
-
-        private void SetUserToSession(User user)
-        {
-            var context = httpContextAccessor.HttpContext;
-            if (context != null && user != null)
-            {
-                context.Session.Set("User", user);
-                logger.LogInformation($"User {user.Name} was set to session");
-            }
         }
 
         public async Task<User?> AddUserAsync(string? name, string email, string password)
@@ -152,9 +156,12 @@ namespace SportWeb.Services
                     logger.LogWarning("User not found");
                     return false;
                 }
+
                 db.Users.Remove(user);
                 await db.SaveChangesAsync();
+                RemoveUserFromCacheAsync(user.Id);
                 logger.LogInformation($"User {user.Name} was removed");
+
                 return true;
             }
             catch (Exception ex)
@@ -196,11 +203,25 @@ namespace SportWeb.Services
         public int? GetCurrentUserId()
         {
             var context = httpContextAccessor.HttpContext;
-            if (context != null && context.User.Identity != null && context.User.Identity.Name != null)
+            if (context is not null && context.User.Identity is not null && context.User.Identity.Name is not null)
             {
                 return int.Parse(context.User.Identity.Name);
             }
             return null;
+        }
+
+        public async Task<string> GetUserNameAsync(int id)
+        {
+            var user = await GetUserAsync(id, true);
+            var username = user?.Name ?? "Anonymous";
+
+            return username;
+        }
+        private static string GetUserCacheKey(int userId) => $"user-{userId}";
+        public async Task RemoveUserFromCacheAsync(int id)
+        {
+            memoryCache.Remove(GetUserCacheKey(id));
+            await outputCacheStore.EvictByTagAsync("UserData", new CancellationToken());
         }
     }
 }

@@ -15,7 +15,7 @@
 </head>
 <body>
     <header>
-        @if (ViewBag.Message != null)
+        @if (ViewBag.Message is not null)
         {
             <p>@ViewBag.Message</p>
         }
@@ -40,13 +40,13 @@
             if (count == 4)
             {
                 <p>
-                    <a asp-controller="Exercises" asp-action="UserExercises" asp-route-id="@Model.Id" asp-route-username="@Model.Name">more...</a>
+                    <a asp-controller="Exercise" asp-action="UserExercises" asp-route-id="@Model.Id" asp-route-username="@Model.Name">more...</a>
                 </p>
                 
                 break;
             }
         <div class="rectangle-border">
-            <h3><a asp-action="Details" asp-controller="Exercises" asp-route-id="@exercise.Id">@exercise.Name</a></h3>
+            <h3><a asp-action="Details" asp-controller="Exercise" asp-route-id="@exercise.Id">@exercise.Name</a></h3>
             <p>@exercise.Description</p>
         </div>
         }
@@ -89,13 +89,13 @@
             if (count == 4)
             {
                 <p>
-                    <a asp-controller="Exercises" asp-action="Favourites" asp-route-id="@Model.Id" asp-route-username="@Model.Name">more...</a>
+                    <a asp-controller="Exercise" asp-action="Favourites" asp-route-id="@Model.Id" asp-route-username="@Model.Name">more...</a>
                 </p>
 
                 break;
             }
             <div class="rectangle-border">
-                <h3><a asp-action="Details" asp-controller="Exercises" asp-route-id="@exercise.Id">@exercise.Name</a></h3>
+                <h3><a asp-action="Details" asp-controller="Exercise" asp-route-id="@exercise.Id">@exercise.Name</a></h3>
                 <p>@exercise.Description</p>
             </div>
         }

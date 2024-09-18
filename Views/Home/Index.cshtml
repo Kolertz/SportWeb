@@ -1,8 +1,8 @@
 ﻿@{
     var user = ViewBag.User as User;
 }
-<div><a asp-controller="Exercises" asp-action="Index">All Exerecises</a></div>
-@if (User.Identity != null && User.Identity.Name != null)
+<div><a asp-controller="Exercise" asp-action="Index">All Exerecises</a></div>
+@if (User.Identity is not null && User.Identity.Name is not null)
 {
     if (ViewBag.IsAdmin)
     {
@@ -11,9 +11,9 @@
         </div>
     }
     <div>
-        <a asp-controller="Exercises" asp-action="Add">Add Exercise</a>
+        <a asp-controller="Exercise" asp-action="Add">Add Exercise</a>
     </div>
-    @if ( user != null)
+    @if ( user is not null)
     {
         <div>
             <a asp-controller="Workout" asp-action="UserWorkouts" asp-route-id="@user.Id" asp-route-username="@user.Name">My Workouts</a>

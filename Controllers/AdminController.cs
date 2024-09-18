@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.OutputCaching;
 using Microsoft.EntityFrameworkCore;
 using SportWeb.Models;
 using SportWeb.Models.Entities;
@@ -14,8 +15,11 @@ namespace SportWeb.Controllers
         IExerciseService exerciseService,
         IPaginationService paginationService) : Controller
     {
+        [OutputCache(PolicyName = "NoUniqueContent")]
         public IActionResult Index() => View();
 
+        [HttpGet]
+        [OutputCache(PolicyName = "ExerciseList")]
         public async Task<IActionResult> PendingExercises(int page = 1, int pageSize = 5)
         {
             IQueryable<Exercise> exercises = db.Exercises.Where(x => x.State == ExerciseState.Pending).Include(u => u.User).OrderBy(x => x.Id);
@@ -26,12 +30,14 @@ namespace SportWeb.Controllers
                 x.Name,
                 x.Description,
                 x.AuthorId,
-                Username = x.User != null ? x.User.Name : "Unknown"
+                Username = x.User is not null ? x.User.Name : "Unknown"
             }).ToList();
             ViewBag.Exercises = result;
             return View(model);
         }
 
+        [HttpGet]
+        [OutputCache(PolicyName = "ExerciseList")]
         public async Task<IActionResult> RejectedExercises(int page = 1, int pageSize = 5)
         {
             IQueryable<Exercise> exercises = db.Exercises.Where(x => x.State == ExerciseState.Rejected).Include(u => u.User).OrderBy(x => x.Id);
@@ -42,12 +48,14 @@ namespace SportWeb.Controllers
                 x.Name,
                 x.Description,
                 x.AuthorId,
-                Username = x.User != null ? x.User.Name : "Unknown"
+                Username = x.User is not null ? x.User.Name : "Unknown"
             }).ToList();
             ViewBag.Exercises = result;
             return View(model);
         }
 
+        [HttpPost]
+        [OutputCache(PolicyName = "NoCache")]
         public async Task<IActionResult> Approve(int id)
         {
             var exercise = await exerciseService.GetExerciseAsync(id);
@@ -64,6 +72,8 @@ namespace SportWeb.Controllers
             return RedirectToAction(nameof(PendingExercises));
         }
 
+        [HttpPost]
+        [OutputCache(PolicyName = "NoCache")]
         public async Task<IActionResult> Reject(int id)
         {
             var exercise = await exerciseService.GetExerciseAsync(id);

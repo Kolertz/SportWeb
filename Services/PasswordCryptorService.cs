@@ -1,13 +1,13 @@
 ﻿namespace SportWeb.Services
 {
-    public interface IPasswordCryptor
+    public interface IPasswordCryptorService
     {
         string Hash(string password);
 
         bool Verify(string password, string hashedPassword);
     }
 
-    public class PasswordCryptor : IPasswordCryptor
+    public class PasswordCryptorService : IPasswordCryptorService
     {
         // Метод для хеширования пароля
         public string Hash(string password)

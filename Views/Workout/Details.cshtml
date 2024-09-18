@@ -17,7 +17,7 @@
             {
                 var exercise = exerciseItem.Exercise;
                 <div class="rectangle-border" data-id="@exercise.Id">
-                    <h3><a asp-action="Details" asp-controller="Exercises" asp-route-id="@exercise.Id">@exercise.Name</a></h3>
+                    <h3><a asp-action="Details" asp-controller="Exercise" asp-route-id="@exercise.Id">@exercise.Name</a></h3>
                     <p>@exercise.Description</p>
                     <p><strong>Author:</strong><a asp-controller="Account" asp-action="Profile" asp-route-id="@exercise.AuthorId">@exercise.User?.Name</a></p>
                 </div>
@@ -33,7 +33,7 @@
                             var exerciseItemInSuperset = superset.WorkoutExercises.ElementAt(j);
                             var exerciseInSuperset = exerciseItemInSuperset.Exercise;
                             <div class="rectangle-border" data-id="@exerciseInSuperset.Id">
-                                <h3><a asp-action="Details" asp-controller="Exercises" asp-route-id="@exerciseInSuperset.Id">@exerciseInSuperset.Name</a></h3>
+                                <h3><a asp-action="Details" asp-controller="Exercise" asp-route-id="@exerciseInSuperset.Id">@exerciseInSuperset.Name</a></h3>
                                 <p>@exerciseInSuperset.Description</p>
                                 <p><strong>Author:</strong><a asp-controller="Account" asp-action="Profile" asp-route-id="@exerciseInSuperset.AuthorId">@exerciseInSuperset.User?.Name</a></p>
                             </div>
