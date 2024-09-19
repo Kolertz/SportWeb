@@ -29,7 +29,8 @@
 - Unit Tests with xUnit
 ## Tech Stack
 
-- **Backend**: ASP.NET Core, Entity Framework Core (SQL Server)
+- **Backend**: ASP.NET Core, Entity Framework Core
 - **Frontend**: Razor Pages, Bootstrap, jQuery
+- **Database**: SQL Server
 - **Unit Testing**: xUnit
 - **Logging**: Microsoft.Extensions.Logging
