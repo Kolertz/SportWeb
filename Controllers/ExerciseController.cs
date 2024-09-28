@@ -24,7 +24,8 @@ namespace SportWeb.Controllers
         IPaginationService paginationService,
         IAuthorizationService authorizationService,
         ICategoryService categoryService,
-        IExerciseCacheService exerciseCacheService) : Controller
+        IExerciseCacheService exerciseCacheService,
+        IFileUploadFacadeService fileUploadFacadeService) : Controller
     {
         [HttpGet]
         [OutputCache(PolicyName = "NoCache")]
@@ -178,19 +179,13 @@ namespace SportWeb.Controllers
                 logger.LogInformation("Exercise state changed to approved");
             }
 
-            var fileUpload = model.FileUpload;
-            if (fileUpload is not null && fileUpload.Length > 0)
-            {
-                exercise.PictureUrl = pictureService.NewPictureName(exercise);
-                var filePath = pictureService.GetPicturePath(exercise.PictureUrl);
-                await fileService.UploadFile(fileUpload, filePath);
-            }
+            exercise.PictureUrl = await fileUploadFacadeService.UploadPicture(model.FileUpload, exercise.PictureUrl, exercise.Id) ?? exercise.PictureUrl;
 
             db.Exercises.Update(exercise);
             if (db.ChangeTracker.HasChanges())
             {
                 await db.SaveChangesAsync();
-                exerciseCacheService.RemoveExerciseFromCacheAsync(exercise.Id);
+                await exerciseCacheService.RemoveExerciseFromCacheAsync(exercise.Id);
                 TempData["Message"] = "Exercise edited successfully!";
             } else
             {

@@ -24,7 +24,8 @@ namespace SportWeb.Controllers
         IAvatarService avatarService,
         IFileService fileService,
         IReCaptchaService reCaptchaService,
-        IOptions<GoogleReCaptchaSettings> reCaptchaSettings) : Controller
+        IOptions<GoogleReCaptchaSettings> reCaptchaSettings,
+        IFileUploadFacadeService fileUploadFacadeService) : Controller
     {
         
         [HttpGet]
@@ -67,7 +68,7 @@ namespace SportWeb.Controllers
             }
             var claims = new List<Claim>
             {
-                new(ClaimTypes.Name, user.Id.ToString() ?? "default"),
+                new(ClaimTypes.Name, user.Id.ToString() ?? "default")
             };
             ClaimsIdentity claimsIdentity = new(claims, "Cookies");
             await context.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, new ClaimsPrincipal(claimsIdentity));
@@ -218,13 +219,9 @@ namespace SportWeb.Controllers
                 return NotFound();
             }
             
-            var fileUpload = model.FileUpload;
-            if (fileUpload is not null && fileUpload.Length > 0)
-            {
-                user.Avatar = avatarService.NewAvatarName(user);
-                var filePath = avatarService.GetAvatarPath(user.Avatar);
-                await fileService.UploadFile(fileUpload, filePath);
-            }
+            var userAvatar = await fileUploadFacadeService.UploadFile(model.FileUpload, user.Avatar, user.Id);
+            user.Avatar = userAvatar ?? user.Avatar;
+
             Log.VariableLog(logger, nameof(model.Name), model.Name!);
             Log.VariableLog(logger, nameof(user.Name), user.Name!);
             user.Name = model.Name;
@@ -248,7 +245,7 @@ namespace SportWeb.Controllers
             {
                 await db.SaveChangesAsync();
                 logger.LogInformation("Changes were made to the database");
-                userCacheService.RemoveUserFromCacheAsync(user.Id);
+                await userCacheService.RemoveUserFromCacheAsync(user.Id);
             }
             else
             {

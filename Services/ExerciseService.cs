@@ -166,8 +166,8 @@ namespace SportWeb.Services
             var fileUpload = model.FileUpload;
             if (fileUpload is not null && fileUpload.Length > 0)
             {
-                var filePath = pictureService.GetPicturePath(pictureService.NewPictureName(exercise));
-                await fileService.UploadFile(fileUpload, filePath);
+                var filePath = pictureService.GetPicturePath(pictureService.NewPictureName(exercise.PictureUrl, exercise.Id));
+                await fileService.UploadFileToServer(fileUpload, filePath);
             }
 
             await db.Exercises.AddAsync(exercise);

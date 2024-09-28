@@ -5,7 +5,7 @@ namespace SportWeb.Services
 {
     public interface IAvatarService
     {
-        string NewAvatarName(User user);
+        string NewAvatarName(string userAvatar, int userId);
 
         string GetAvatarPath(string avatarName);
 
@@ -16,17 +16,17 @@ namespace SportWeb.Services
     {
         private readonly ILogger logger = logger;
 
-        public string NewAvatarName(User user)
+        public string NewAvatarName(string userAvatar, int userId)
         {
-            if (user == null || string.IsNullOrEmpty(user.Avatar))
+            if (string.IsNullOrEmpty(userAvatar))
             {
                 throw new ArgumentException("User or user avatar cannot be null");
             }
 
-            string avatarUrl = user.Avatar;
+            string avatarUrl = userAvatar;
             if (avatarUrl == "avatar.png")
             {
-                return $"avatar{user.Id}_v=1.png";
+                return $"avatar{userId}_v=1.png";
             }
             //string pattern = @"\_v=(\d+)\.png";
             string pattern = @"_v=(\d+)\.png";
@@ -35,7 +35,7 @@ namespace SportWeb.Services
             if (match.Success && int.TryParse(match.Groups[1].Value, out int version))
             {
                 version++;
-                string path = $"avatar{user.Id}_v{version}.png";
+                string path = $"avatar{userId}_v{version}.png";
                 logger.LogInformation($"New avatar path: {path}");
                 return path;
             }

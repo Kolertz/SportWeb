@@ -5,7 +5,7 @@ namespace SportWeb.Services
 {
     public interface IPictureService
     {
-        string NewPictureName(Exercise exercise);
+        string NewPictureName(string pictureUrl, int exerciseId);
 
         string GetPicturePath(string pictureName);
 
@@ -16,12 +16,11 @@ namespace SportWeb.Services
     {
         private readonly ILogger logger = logger;
 
-        public string NewPictureName(Exercise exercise)
+        public string NewPictureName(string pictureUrl, int exerciseId)
         {
-            string pictureUrl = exercise.PictureUrl;
             if (pictureUrl == "picture.png")
             {
-                return $"picture{exercise.Id}_v=1.png";
+                return $"picture{exerciseId}_v=1.png";
             }
             string pattern = @"_v=(\d+)\.png";
             var match = Regex.Match(pictureUrl, pattern);
@@ -29,7 +28,7 @@ namespace SportWeb.Services
             if (match.Success && int.TryParse(match.Groups[1].Value, out int version))
             {
                 version++;
-                string path = $"{exercise.Id}_v{version}.png";
+                string path = $"{exerciseId}_v{version}.png";
                 logger.LogInformation($"New picture path: {path}");
                 return path;
             }

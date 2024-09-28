@@ -13,8 +13,7 @@ using SportWeb.Models.Entities;
 using SportWeb.Services;
 using System.Text.Json.Serialization;
 using System.Threading.RateLimiting;
-// TODO Добавить изменения кэшированных объектов при их изменении
-// TODO Добавить использования OutputCache
+
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllersWithViews(options =>
@@ -97,6 +96,7 @@ builder.Services.AddScoped<IWorkoutEditorService, WorkoutService>();
 builder.Services.AddScoped<IWorkoutCacheService, WorkoutService>();
 builder.Services.AddScoped<ICategoryService, CategoryService>();
 builder.Services.AddSingleton<IOutboundParameterTransformer, KebabCaseParameterTransformer>();
+builder.Services.AddScoped<IFileUploadFacadeService, FileUploadFacadeService>();
 
 builder.Services.AddOutputCache(options =>
 {
