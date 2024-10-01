@@ -19,7 +19,6 @@ namespace SportWeb.Controllers
         ILogger<ExerciseController> logger,
         IUserRepository userRepository,
         IUserCacheService userCacheService,
-        IFileService fileService,
         IPictureService pictureService,
         IPaginationService paginationService,
         IAuthorizationService authorizationService,
@@ -27,7 +26,7 @@ namespace SportWeb.Controllers
         IExerciseCacheService exerciseCacheService,
         IFileUploadFacadeService fileUploadFacadeService) : Controller
     {
-        [HttpGet]
+        [Route("/exercises")]
         [OutputCache(PolicyName = "NoCache")]
         public async Task<IActionResult> Index(int? muscle, int? movement, int? tag, int? equipment, string? name, int page = 1, int pageSize = 5)
         {
@@ -290,8 +289,8 @@ namespace SportWeb.Controllers
             logger.LogInformation("User is found");
             user.FavouriteExercises.Add(exercise);
             await db.SaveChangesAsync();
-            exerciseCacheService.RemoveExerciseFromCacheAsync(exercise.Id);
-            userCacheService.RemoveUserFromCacheAsync(user.Id);
+            await exerciseCacheService.RemoveExerciseFromCacheAsync(exercise.Id);
+            await userCacheService.RemoveUserFromCacheAsync(user.Id);
             TempData["Message"] = "Exercise added to Favourites successfully!";
             logger.LogInformation("Exercise added to Favourites successfully");
 
@@ -320,8 +319,8 @@ namespace SportWeb.Controllers
 
 
             await db.SaveChangesAsync();
-            exerciseCacheService.RemoveExerciseFromCacheAsync(exercise.Id);
-            userCacheService.RemoveUserFromCacheAsync(user.Id);
+            await exerciseCacheService.RemoveExerciseFromCacheAsync(exercise.Id);
+            await userCacheService.RemoveUserFromCacheAsync(user.Id);
             TempData["Message"] = "Exercise removed from Favourites successfully :(";
             logger.LogInformation("Exercise removed from Favourites successfully");
 

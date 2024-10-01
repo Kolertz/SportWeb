@@ -28,7 +28,6 @@ namespace SportWeb.Helpers.TagHelpers
             ul.AddCssClass("pagination");
 
             IUrlHelper urlHelper = helperFactory.GetUrlHelper(ViewContext);
-            TagBuilder result = new("div");
             for (int i = PaginationModel.StartPage; i <= PaginationModel.EndPage; i++)
             {
                 var li = new TagBuilder("li");

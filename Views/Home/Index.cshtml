@@ -16,7 +16,7 @@
     @if ( user is not null)
     {
         <div>
-            <a asp-controller="Workout" asp-action="UserWorkouts" asp-route-id="@user.Id" asp-route-username="@user.Name">My Workouts</a>
+            <a asp-controller="Workout" asp-action="UserWorkouts" asp-route-id="@user.Id">My Workouts</a>
         </div>
     }
     <a asp-controller="Account" asp-action="Logout">Log out</a>

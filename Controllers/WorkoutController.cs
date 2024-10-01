@@ -53,6 +53,7 @@ namespace SportWeb.Controllers
 
             WorkoutViewModel model = new()
             {
+                Name = workout.Name,
                 Id = workout.Id,
                 IsPublic = workout.IsPublic,
                 Description = workout.Description,
@@ -125,7 +126,7 @@ namespace SportWeb.Controllers
 
         public async Task<IActionResult> RemoveExercise(int workoutId, int exerciseId)
         {
-            var workout = await workoutRepository.GetWorkoutAsync(workoutId);
+            var workout = await workoutRepository.GetWorkoutAsync(workoutId, false, ["WorkoutExercises"]);
             if (workout == null)
             {
                 return NotFound();
@@ -142,7 +143,7 @@ namespace SportWeb.Controllers
 
         public async Task<IActionResult> RemoveSuperset(int workoutId, int supersetId)
         {
-            var workout = await workoutRepository.GetWorkoutAsync(workoutId);
+            var workout = await workoutRepository.GetWorkoutAsync(workoutId, false, ["Supersets"]);
             if (workout == null)
             {
                 return NotFound();
@@ -162,7 +163,7 @@ namespace SportWeb.Controllers
         public async Task<IActionResult> Save(int workoutId)
         {
             logger.LogInformation("We are on the GET method");
-            var workout = await workoutRepository.GetWorkoutAsync(workoutId);
+            var workout = await workoutRepository.GetWorkoutAsync(workoutId, false, ["Supersets", "WorkoutExercises.Exercise.User"]);
 
             if (workout == null)
             {
@@ -178,6 +179,7 @@ namespace SportWeb.Controllers
 
             WorkoutViewModel model = new()
             {
+                Name = workout.Name,
                 Id = workout.Id,
                 IsPublic = workout.IsPublic,
                 Description = workout.Description,

@@ -1,5 +1,6 @@
 ﻿@model WorkoutViewModel
 
+<h2>@Model.Name</h2>
 <!-- Основная форма для сохранения порядка -->
 <form id="saveOrderForm" asp-action="SaveOrder" asp-controller="Workout" method="post">
     @Html.AntiForgeryToken()

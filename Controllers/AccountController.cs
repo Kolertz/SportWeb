@@ -22,7 +22,6 @@ namespace SportWeb.Controllers
         ILogger<AccountController> logger,
         IPasswordCryptorService passwordCryptor,
         IAvatarService avatarService,
-        IFileService fileService,
         IReCaptchaService reCaptchaService,
         IOptions<GoogleReCaptchaSettings> reCaptchaSettings,
         IFileUploadFacadeService fileUploadFacadeService) : Controller

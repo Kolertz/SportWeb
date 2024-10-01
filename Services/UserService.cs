@@ -159,7 +159,7 @@ namespace SportWeb.Services
 
                 db.Users.Remove(user);
                 await db.SaveChangesAsync();
-                RemoveUserFromCacheAsync(user.Id);
+                await RemoveUserFromCacheAsync(user.Id);
                 logger.LogInformation($"User {user.Name} was removed");
 
                 return true;

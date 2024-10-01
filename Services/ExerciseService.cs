@@ -19,7 +19,15 @@ namespace SportWeb.Services
         Task RemoveExerciseFromCacheAsync(int id);
         void SetExerciseToCache(Exercise? exercise);
     }
-    public class ExerciseService(ApplicationContext db, ILogger<ExerciseService> logger, IMemoryCache memoryCache, IUserCacheService userCacheService, IOutputCacheStore outputCacheStore, IAuthorizationService authorizationService, IFileService fileService, IPictureService pictureService, IHttpContextAccessor httpContextAccessor) : IExerciseService, IExerciseCacheService
+    public class ExerciseService(
+        ApplicationContext db,
+        ILogger<ExerciseService> logger,
+        IMemoryCache memoryCache,
+        IUserCacheService userCacheService,
+        IOutputCacheStore outputCacheStore,
+        IFileService fileService,
+        IPictureService pictureService,
+        IHttpContextAccessor httpContextAccessor) : IExerciseService, IExerciseCacheService
     {
         public List<IndexExerciseViewModel> GetExerciseViewModels(List<Exercise> items)
         {
