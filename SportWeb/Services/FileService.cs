@@ -4,7 +4,7 @@
     {
         Task<bool> UploadFileToServer(IFormFile fileUpload, string filePath);
     }
-
+    
     public class FileService(ILogger<FileService> logger) : IFileService
     {
         public async Task<bool> UploadFileToServer(IFormFile fileUpload, string filePath)

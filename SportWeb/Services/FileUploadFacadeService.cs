@@ -7,7 +7,7 @@ namespace SportWeb.Services
         Task<string?> UploadFile(IFormFile? fileUpload, string userAvatar, int userId);
         Task<string?> UploadPicture(IFormFile? fileUpload, string pictureUrl, int exerciseId);
     }
-    public class FileUploadFacadeService(ILogger<FileUploadFacadeService> logger, IFileService fileService, IAvatarService avatarService, IPictureService pictureService) : IFileUploadFacadeService
+    public class FileUploadFacadeService(IFileService fileService, IAvatarService avatarService, IPictureService pictureService) : IFileUploadFacadeService
     {
         public async Task<string?> UploadFile(IFormFile? fileUpload, string userAvatar, int userId)
         {

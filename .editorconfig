@@ -1,0 +1,4 @@
+﻿[*.cs]
+
+# CA2254: Шаблон должен быть статическим выражением
+dotnet_diagnostic.CA2254.severity = none
